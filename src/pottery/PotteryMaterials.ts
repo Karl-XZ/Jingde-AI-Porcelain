@@ -17,6 +17,10 @@ export class PotteryMaterialManager {
   public texture: THREE.CanvasTexture
 
   // 名釉专属高精物理材质贴图
+  // 泥料生坯真实拉坯指纹旋纹贴图
+  public clayTexture: THREE.CanvasTexture
+
+  // 名釉专属高精物理材质贴图
   public langyaoTexture: THREE.CanvasTexture
   public huayouTexture: THREE.CanvasTexture
   public chayemoTexture: THREE.CanvasTexture
@@ -36,12 +40,15 @@ export class PotteryMaterialManager {
     this.ctx = context
 
     // 默认初始为陶土生坯泥料色
-    this.ctx.fillStyle = '#c79a6b'
+    this.ctx.fillStyle = '#c5a075'
     this.ctx.fillRect(0, 0, width, height)
 
     this.texture = new THREE.CanvasTexture(this.canvas)
     this.texture.wrapS = THREE.RepeatWrapping
     this.texture.wrapT = THREE.ClampToEdgeWrapping
+
+    // 预先生成景德镇高岭土拉坯旋纹贴图
+    this.clayTexture = this.createClayTexture(width, height)
 
     // 预先生成景德镇国宝名釉的真实纹理贴图
     const langCanvas = generateLangyaoCanvas(width, height)
@@ -59,15 +66,53 @@ export class PotteryMaterialManager {
     this.chayemoTexture.wrapS = THREE.RepeatWrapping
     this.chayemoTexture.wrapT = THREE.ClampToEdgeWrapping
 
-    // 默认 PBR 物理材质
+    // 默认 PBR 物理材质 (真实高岭土生坯)
     this.material = new THREE.MeshPhysicalMaterial({
-      color: 0xc79a6b,
-      roughness: 0.82,
-      metalness: 0.02,
+      map: this.clayTexture,
+      roughness: 0.88,
+      metalness: 0.01,
       clearcoat: 0.0,
-      clearcoatRoughness: 0.1,
+      clearcoatRoughness: 0.5,
       side: THREE.DoubleSide,
     })
+  }
+
+  /**
+   * 生成景德镇麻仓高岭土真实微观矿物颗粒与陶轮拉坯指痕旋纹贴图
+   */
+  private createClayTexture(width = 1024, height = 1024): THREE.CanvasTexture {
+    const c = document.createElement('canvas')
+    c.width = width
+    c.height = height
+    const ctx = c.getContext('2d')!
+
+    // 1. 高岭土温润黄褐基色
+    ctx.fillStyle = '#c79f72'
+    ctx.fillRect(0, 0, width, height)
+
+    // 2. 陶轮旋转指纹拉坯旋纹 (Throwing rings & grooves)
+    for (let y = 0; y < height; y += 4) {
+      const wave = Math.sin(y * 0.12) * 5 + Math.sin(y * 0.035) * 7
+      const alpha = 0.06 + Math.sin(y * 0.22) * 0.04
+      ctx.fillStyle = wave > 0 ? `rgba(240, 222, 198, ${alpha})` : `rgba(142, 102, 65, ${alpha})`
+      ctx.fillRect(0, y, width, 4)
+    }
+
+    // 3. 高岭土细微矿物颗粒噪点
+    const imgData = ctx.getImageData(0, 0, width, height)
+    const d = imgData.data
+    for (let i = 0; i < d.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 16
+      d[i] = Math.min(255, Math.max(0, d[i] + noise))
+      d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + noise))
+      d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + noise))
+    }
+    ctx.putImageData(imgData, 0, 0)
+
+    const tex = new THREE.CanvasTexture(c)
+    tex.wrapS = THREE.RepeatWrapping
+    tex.wrapT = THREE.ClampToEdgeWrapping
+    return tex
   }
 
   /**
@@ -231,13 +276,15 @@ export class PotteryMaterialManager {
     this.currentGlaze = glaze
 
     if (glaze === 'clay') {
-      // 生坯 / 修型素胎阶段：陶土泥巴质感，无任何罩釉
-      this.material.map = null
-      this.material.color.setHex(0xc79a6b)
+      // 生坯 / 修型素胎阶段：真实高岭土拉坯旋纹质感，无任何罩釉
+      this.material.map = this.clayTexture
+      this.material.color.setHex(0xffffff)
       this.material.roughness = isFired ? 0.65 : 0.88
       this.material.metalness = 0.01
       this.material.clearcoat = 0.0
       this.material.clearcoatRoughness = 0.5
+      this.material.emissive.setHex(0x000000)
+      this.material.emissiveIntensity = 0
       this.material.needsUpdate = true
       return
     }
@@ -245,6 +292,11 @@ export class PotteryMaterialManager {
     // 核心准则：进入纹样/施釉/成品阶段，贴图始终为包含用户手绘与纹样的 this.texture，绝不破坏覆盖颜色！
     this.material.map = this.texture
     this.material.color.setHex(0xffffff)
+    if (isFired) {
+      // 成瓷冷却玻化出窑状态
+      this.material.emissive.setHex(0x000000)
+      this.material.emissiveIntensity = 0
+    }
 
     // 调节表面物理质感、高光反射强度、粗糙度与清漆折射
     switch (glaze) {
@@ -327,10 +379,14 @@ export class PotteryMaterialManager {
   }
 
   /**
-   * 烧制动态温控过渡 (0 = 常温生坯, 1 = 1280°C 熔融成瓷)
+   * 烧制动态温控过渡 (0 = 常温生坯, 1 = 1280°C~1300°C 熔融成瓷)
+   * 真实黑体热辐射白炽自发光 (Thermal Blackbody Incandescence)
    */
-  public updateFiringProgress(progress: number) {
+  public updateFiringProgress(progress: number, currentTemp?: number) {
     const p = Math.max(0, Math.min(1, progress))
+    const temp = currentTemp ?? (25 + p * (1300 - 25))
+
+    // 1. 物理光学表面熔融玻化
     if (this.currentGlaze === 'clay') {
       this.material.roughness = 0.85 - p * 0.2
       this.material.clearcoat = p * 0.3
@@ -343,6 +399,28 @@ export class PotteryMaterialManager {
       this.material.clearcoat = p * 1.0
       this.material.clearcoatRoughness = 0.22 - p * 0.20
     }
+
+    // 2. 1300°C 柴窑热力学白炽自发光相变 (黑体辐射定律普朗克拟合)
+    if (temp < 600) {
+      this.material.emissive.setHex(0x000000)
+      this.material.emissiveIntensity = 0
+    } else if (temp < 900) {
+      // 600°C ~ 900°C: 暗红微炽 -> 樱桃红热
+      const ratio = (temp - 600) / 300
+      this.material.emissive.setHex(0x992200)
+      this.material.emissiveIntensity = ratio * 0.6
+    } else if (temp < 1150) {
+      // 900°C ~ 1150°C: 炽热金橙
+      const ratio = (temp - 900) / 250
+      this.material.emissive.setHex(0xee5500)
+      this.material.emissiveIntensity = 0.6 + ratio * 0.8
+    } else {
+      // 1150°C ~ 1300°C+: 白炽耀眼、通体透亮、釉熔如水
+      const ratio = Math.min(1, (temp - 1150) / 150)
+      this.material.emissive.setHex(0xffaa33)
+      this.material.emissiveIntensity = 1.4 + ratio * 1.2
+    }
+    this.material.needsUpdate = true
   }
 
   public getGlaze(): GlazeType {

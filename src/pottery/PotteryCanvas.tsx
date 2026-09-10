@@ -350,7 +350,8 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       matManager.setGlazeGloss(glazeGloss)
       if (kilnLight) kilnLight.intensity = 0
     } else if (step === 'fire') {
-      if (kilnLight) kilnLight.intensity = 2.8
+      if (kilnLight) kilnLight.intensity = 3.5
+      matManager.updateFiringProgress(1.0, 1300)
     } else if (step === 'finish') {
       if (kilnLight) kilnLight.intensity = 0
       matManager.setGlaze(activeGlaze, true)
@@ -378,18 +379,18 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         onFiringProgressRef.current?.(targetTemp, false)
         onToastRef.current?.(`窑温已达 ${targetTemp}°C！强还原气氛定色，釉层完全熔融玻化，开窑大吉！`)
         if (kilnFireLightRef.current) {
-          kilnFireLightRef.current.intensity = 0
+          kilnFireLightRef.current.intensity = 3.6
         }
       } else {
         onFiringProgressRef.current?.(temp, true)
         if (kilnFireLightRef.current) {
           const ratio = (temp - 25) / (targetTemp - 25)
-          kilnFireLightRef.current.intensity = 3.6 * Math.sin(ratio * Math.PI)
+          kilnFireLightRef.current.intensity = 1.5 + 2.4 * ratio
         }
       }
       setFiringTemp(temp)
       const progress = (temp - 25) / (targetTemp - 25)
-      matManagerRef.current?.updateFiringProgress(progress)
+      matManagerRef.current?.updateFiringProgress(progress, temp)
     }, 50)
   }, [isFiringActive])
 

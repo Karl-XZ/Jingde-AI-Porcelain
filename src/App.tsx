@@ -18,6 +18,8 @@ import {
   type TrimmingDiagnosisResponse,
   type FiringSimulationResponse,
   type AppraisalResponse,
+  type FormingInferenceResponse,
+  type GlazeSynthesisResponse,
 } from './services/aiService'
 import './App.css'
 
@@ -261,6 +263,8 @@ export default function App() {
   const [isGeneratingSvg, setIsGeneratingSvg] = useState<boolean>(false)
   const [customGlazePrompt, setCustomGlazePrompt] = useState<string>('')
   const [isSynthesizingGlaze, setIsSynthesizingGlaze] = useState<boolean>(false)
+  const [inferredShape, setInferredShape] = useState<FormingInferenceResponse | null>(null)
+  const [synthesizedGlaze, setSynthesizedGlaze] = useState<GlazeSynthesisResponse | null>(null)
   const [fireSim, setFireSim] = useState<FiringSimulationResponse>({
     atmosphere: '松柴强还原焰 (CO 4.2%)',
     co_concentration: 4.2,
@@ -352,6 +356,7 @@ export default function App() {
     setIsAiThinking(true)
     try {
       const res = await inferFormingShape(promptText, { heightScale, rimScale, bellyScale })
+      setInferredShape(res)
       setHeightScale(res.heightScale)
       setRimScale(res.rimScale)
       setBellyScale(res.bellyScale)
@@ -437,6 +442,7 @@ export default function App() {
     toast(`✦ 名釉天工匠正在逆推【${glazeName}】PBR 光学配方...`)
     try {
       const res = await synthesizeGlazePBR(glazeName)
+      setSynthesizedGlaze(res)
       setActiveGlaze(defaultType)
       canvasRef.current?.applyCustomPBR(res.pbr)
       toast(`✦ 已成功调制并应用【${res.glaze_name}】(IOR ${res.pbr.ior})`)
@@ -628,6 +634,15 @@ export default function App() {
                   推演
                 </button>
               </div>
+              {inferredShape && (
+                <div className="ai-diagnosis-card" style={{ marginTop: '10px' }}>
+                  <div className="ai-tag">✦ 官窑形制推演成果 · {inferredShape.dynasty}【{inferredShape.shape_name}】</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.5' }}>
+                    <b>比例指标</b>：高 {inferredShape.heightScale}x · 口 {inferredShape.rimScale}x · 腹 {inferredShape.bellyScale}x
+                    <div style={{ marginTop: '5px', fontSize: '11px', color: 'var(--text-tertiary)', lineHeight: '1.4' }}>{inferredShape.aesthetic_analysis}</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="tool-group">
@@ -1023,6 +1038,15 @@ export default function App() {
                   {isSynthesizingGlaze ? '逆推中…' : '逆推'}
                 </button>
               </div>
+              {synthesizedGlaze && (
+                <div className="ai-diagnosis-card" style={{ marginTop: '10px' }}>
+                  <div className="ai-tag">✦ 名贵罩釉逆推成果 · 【{synthesizedGlaze.glaze_name}】</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.5' }}>
+                    <b>光学指标</b>：折射率 IOR {synthesizedGlaze.pbr.ior} · 清漆度 {synthesizedGlaze.pbr.clearcoat} · 粗糙度 {synthesizedGlaze.pbr.roughness}
+                    <div style={{ marginTop: '5px', fontSize: '11px', color: 'var(--text-tertiary)', lineHeight: '1.4' }}>{synthesizedGlaze.mineral_formula}</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="left-cta-wrap">

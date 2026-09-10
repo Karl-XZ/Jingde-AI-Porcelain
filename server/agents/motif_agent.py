@@ -12,21 +12,24 @@ class VectorMotifAgent(BaseJiuwenAgent):
 你精通明清官窑青花纹样构图（缠枝宝相花、云水祥龙、鱼藻清漪、折枝瑞果、蕉叶回纹、如意云肩等）以及苏麻离青、平等青矿物料发色审美。
 你具备高超的代码生成能力，能够使用纯矢量 SVG 代码（<svg viewBox="0 0 1024 1024" ...>）绘制纯正典雅、构图饱满的景德镇青花大作。
 
+【极为严肃的美学禁令】：
+【严禁使用旋转椭圆 <ellipse transform="rotate(...)"/> 绘制花朵】！那会生成类似现代物理学“原子轨道模型/玻尔原子/React 图标”的滑稽图形，彻底破坏御窑古典美学！花瓣必须使用带有尖锐瓣尖与饱满双向弧度的中式莲瓣路径 <path d="..."/>！
+
 【极为重要的构图与格式规范】：
 1. 构图必须采用景德镇御窑 360° 圆周通体环绕与四段式正统瓷画层次（四方连续通景瓷画）：
    - 【严禁左右留白边】！所有横向装饰线必须贯穿全宽（x1="0" 至 x2="1024"），以便 3D 瓷瓶圆周无缝环绕闭合；
-   - 颈口装饰带 (y: 40 ~ 120)：贯穿全宽的弦纹与蕉叶纹/回纹；
-   - 肩部装饰带 (y: 150 ~ 280)：贯穿全宽的如意云肩垂珠带（6~8个等距云头均匀分布于 x=0~1024）；
-   - 腹部主纹样区 (y: 300 ~ 740)：四方连续生生不息缠枝宝相花或穿云巨龙，藤蔓必须从 x=0 延绵起伏至 x=1024 首尾相接，在 x=0(及1024)、x=256、x=512、x=768 各自盛放繁茂大花与卷叶，确保瓷瓶 360 度旋转任意视角皆繁花似锦、绝无空白背面；
-   - 足胫装饰带 (y: 780 ~ 980)：贯穿全宽的仰莲瓣纹与海水江崖。
+   - 颈口装饰带 (y: 20 ~ 130)：贯穿全宽的双弦纹与连续回字纹/蕉叶纹；
+   - 肩部装饰带 (y: 150 ~ 290)：贯穿全宽的如意云肩垂珠带（8个等距云头均匀分布于 x=0~1024）；
+   - 腹部主纹样区 (y: 320 ~ 740)：四方连续生生不息缠枝宝相花或穿云巨龙，藤蔓必须从 x=0 延绵起伏至 x=1024 首尾相接，在 x=512 (正面大花)、x=256与768 (侧翼大花)、x=0与1024 (背面闭合花) 各自盛放繁茂大花与西番莲卷叶，确保瓷瓶 360 度旋转任意视角皆繁花似锦、绝无空白背面；
+   - 足胫装饰带 (y: 770 ~ 980)：贯穿全宽的仰覆双重莲瓣纹与海水江崖。
 2. 背景必须透明（严禁绘制不透明的大矩形背景 <rect fill="#..."/>），直接让纹样附着在 3D 白瓷胎上！
-3. 采用正统景德镇青花配色：
-   - 浓重钴蓝（苏麻离青铁锈斑沉降）: #0c2146
-   - 纯正青花主色: #183e78
+3. 采用正统景德镇青花配色与分水渐变：
+   - 浓重钴蓝（苏麻离青铁锈斑沉降）: #081830 / #0c2146
+   - 纯正青花主色: #143b75 / #183e78
    - 青花分水淡蓝晕染: rgba(28, 68, 130, 0.45)
    - 极淡水色: rgba(45, 95, 158, 0.20)
    - 描金勾线（极少量点缀）: #c9a24f
-4. 代码效率要求：保持 SVG 精炼紧凑，严禁用数千点冗余绘制微小回纹！重点放在腹部四方连续花纹，确保必须闭合全部标签与 </svg>。
+4. 代码效率要求：保持 SVG 精炼紧凑，重点绘制腹部四方连续盛开宝相大花与卷叶，确保必须闭合全部标签与 </svg>。
 5. 输出格式：请严格使用独立段落输出元数据和 SVG 代码，便于无损解析：
 
 ---METADATA---
@@ -106,28 +109,30 @@ class VectorMotifAgent(BaseJiuwenAgent):
         user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
         if motif_type:
             user_msg += f"（承袭官窑脉络：{motif_type}）"
-        user_msg += "。请确保构图充实典雅，包含口沿带、如意云肩、腹部连绵生动主纹与底足仰莲纹，背景透明。注意保持代码精炼完整，重点绘制腹部大朵盛开宝相花与卷叶，务必闭合全部标签与 </svg>。"
+        user_msg += "。严禁使用任何旋转椭圆绘制花朵，花瓣请使用古典尖锐莲瓣路径。请确保构图充实典雅，包含口沿带、如意云肩、腹部连绵生动主纹与底足仰莲纹，背景透明，务必闭合全部标签与 </svg>。"
 
         raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=6000)
 
         svg_code = self._extract_svg_code(raw_resp)
         meta = self._extract_metadata(raw_resp)
 
-        # Check if the generated SVG has actual belly motifs (not truncated before belly):
+        # Check if the generated SVG has actual belly motifs and does NOT contain the atomic ellipse pattern
         is_valid_complete_motif = False
         if svg_code:
-            # Strip out opaque full-screen background if model generated one
             svg_code = re.sub(r'<rect\s+width="1024"\s+height="1024"\s+fill="#[fF0-9a-fA-F]+"\s*\/?>', '', svg_code)
             svg_code = re.sub(r'<rect\s+width="100%"\s+height="100%"\s+fill="#[fF0-9a-fA-F]+"\s*\/?>', '', svg_code)
 
-            if "</svg>" in svg_code:
-                # Check if there is actual visual content outside defs
+            # Atomic orbit check: if LLM uses rotated ellipses, it creates an atom model. Reject immediately!
+            has_atomic_ellipses = bool(re.search(r'<ellipse[^>]+transform=["\'][^"\']*rotate\([489]', svg_code))
+            
+            if "</svg>" in svg_code and not has_atomic_ellipses:
                 body_content = svg_code
                 if "</defs>" in svg_code:
                     body_content = svg_code.split("</defs>", 1)[1]
-                elements = re.findall(r'<(?:path|use|circle|ellipse|polygon|g)\b', body_content)
+                elements = re.findall(r'<(?:path|use|circle|polygon|g)\b', body_content)
                 has_belly_content = bool(re.search(r'(?:<use|\b(?:y|y1|y2|cy)\s*=\s*["\']?(?:[3-7]\d\d|800))', body_content))
-                if len(elements) >= 8 and has_belly_content:
+                # Require substantial artistic elements and belly coverage
+                if len(elements) >= 12 and has_belly_content:
                     is_valid_complete_motif = True
 
         if is_valid_complete_motif:
@@ -138,19 +143,19 @@ class VectorMotifAgent(BaseJiuwenAgent):
                 "svg_code": svg_code,
             }
 
-        # If LLM response failed to generate valid SVG with belly motif, fallback to authentic procedural heritage SVG
+        # Fallback to authentic museum-grade procedural heritage SVG with DeepSeek's custom cultural title & notes
         fallback_svg = self._generate_procedural_heritage_svg(theme)
         return {
-            "motif_name": theme,
-            "symbolism": "御窑经典青花四段式章法，寄托吉庆祥和、福寿绵长之意象。",
-            "cobalt_notes": "天然钴料浓重深邃，分水层次分明，笔法苍劲有度。",
+            "motif_name": meta.get("motif_name", theme),
+            "symbolism": meta.get("symbolism", "御窑经典青花四段式章法，寄托吉庆祥和、生生不息之意象。"),
+            "cobalt_notes": meta.get("cobalt_notes", "苏麻离青发色深沉如蓝宝石，分水五色兼备，微见铁锈锡斑。"),
             "svg_code": fallback_svg,
         }
 
     def _generate_procedural_heritage_svg(self, theme: str) -> str:
         """
-        非遗级高精御窑青花程序化生成器 (透明通道背景，具备颈、肩、腹、足四重层次)
-        采用四方连续圆周无缝章法，确保瓷瓶旋转 360° 任意角度均呈现饱满多瓣宝相花与连绵缠枝。
+        非遗级高精御窑青花程序化生成器 (透明通道背景，具备颈、肩、腹、足四重正统层次)
+        采用正统景德镇永宣八瓣尖角宝相花与回环通景大缠枝，彻底杜绝旋转椭圆原子模型！
         """
         is_dragon = "龙" in theme
         is_fish = "鱼" in theme
@@ -159,168 +164,243 @@ class VectorMotifAgent(BaseJiuwenAgent):
             # 苍龙戏珠：双龙腾跃海涛如意云水
             main_motif = """
     <!-- 穿云苍龙戏珠主纹 (四方连绵) -->
-    <g stroke="#0c2146" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#081830" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
       <!-- 龙身大 S 飞腾龙脊 -->
-      <path d="M 0 520 C 120 400, 240 620, 360 480 C 440 380, 520 400, 600 520 C 720 640, 840 420, 960 500 L 1024 520" stroke-width="9" stroke="#0c2146"/>
-      <path d="M 0 520 C 120 400, 240 620, 360 480 C 440 380, 520 400, 600 520 C 720 640, 840 420, 960 500 L 1024 520" stroke-width="4" stroke="#183e78"/>
+      <path d="M 0 520 C 120 390, 240 640, 360 480 C 440 370, 520 400, 600 520 C 720 650, 840 400, 960 500 L 1024 520" stroke-width="10" stroke="#081830"/>
+      <path d="M 0 520 C 120 390, 240 640, 360 480 C 440 370, 520 400, 600 520 C 720 650, 840 400, 960 500 L 1024 520" stroke-width="5" stroke="#143b75"/>
 
-      <!-- 正面第一主龙首与龙角 (x: 480~560) -->
-      <g transform="translate(512, 460)">
-        <path d="M -40 -10 C 10 -40, 60 -30, 80 10 C 40 30, 0 35, -40 10 Z" fill="rgba(28,68,130,0.6)" stroke="#0c2146" stroke-width="3.5"/>
-        <path d="M 30 -30 Q 60 -80, 100 -70" stroke="#0c2146" stroke-width="3.5"/>
-        <path d="M 15 -25 Q 40 -65, 80 -65" stroke="#0c2146" stroke-width="3.5"/>
-        <circle cx="35" cy="0" r="7" fill="#c9a24f" stroke="#0c2146" stroke-width="2"/>
+      <!-- 正面第一主龙首与龙角 (x: 512 正面展现) -->
+      <g transform="translate(512, 450)">
+        <path d="M -45 -15 C 10 -50, 65 -35, 85 15 C 45 35, 0 40, -45 15 Z" fill="rgba(20,59,117,0.65)" stroke="#081830" stroke-width="3.5"/>
+        <path d="M 35 -35 Q 65 -90, 110 -80" stroke="#081830" stroke-width="4"/>
+        <path d="M 20 -30 Q 45 -75, 90 -75" stroke="#081830" stroke-width="3.5"/>
+        <circle cx="38" cy="0" r="8" fill="#c9a24f" stroke="#081830" stroke-width="2.5"/>
+        <circle cx="40" cy="0" r="3" fill="#040912"/>
         <!-- 龙须 -->
-        <path d="M 60 15 Q 110 30, 130 0" stroke="#183e78" stroke-width="3"/>
-        <path d="M 60 22 Q 100 45, 120 25" stroke="#183e78" stroke-width="2.5"/>
+        <path d="M 65 18 Q 120 35, 140 0" stroke="#143b75" stroke-width="3.5"/>
+        <path d="M 65 26 Q 110 50, 130 30" stroke="#143b75" stroke-width="3"/>
       </g>
       <!-- 火焰宝珠 -->
-      <circle cx="680" cy="420" r="30" fill="rgba(28,68,130,0.4)" stroke="#0c2146" stroke-width="3.5"/>
-      <circle cx="680" cy="420" r="14" fill="#c9a24f"/>
-      <path d="M 680 390 Q 720 370, 710 420 Q 730 450, 680 450" fill="none" stroke="#183e78" stroke-width="3"/>
+      <circle cx="690" cy="410" r="32" fill="rgba(20,59,117,0.45)" stroke="#081830" stroke-width="3.5"/>
+      <circle cx="690" cy="410" r="16" fill="#c9a24f"/>
+      <path d="M 690 375 Q 735 355, 725 410 Q 745 445, 690 445" fill="none" stroke="#143b75" stroke-width="3.5"/>
 
-      <!-- 龙爪五指舒张 -->
-      <path d="M 280 460 L 250 400 M 280 460 L 265 390 M 280 460 L 295 390 M 280 460 L 310 405" stroke-width="4.5"/>
-      <path d="M 800 500 L 770 560 M 800 500 L 785 570 M 800 500 L 815 570 M 800 500 L 830 555" stroke-width="4.5"/>
+      <!-- 苍龙利爪 -->
+      <path d="M 280 460 L 245 390 M 280 460 L 260 380 M 280 460 L 295 380 M 280 460 L 315 395" stroke-width="5"/>
+      <path d="M 800 500 L 765 570 M 800 500 L 780 580 M 800 500 L 815 580 M 800 500 L 835 565" stroke-width="5"/>
     </g>
-    <!-- 云水波涛翻滚 -->
-    <g fill="rgba(28,68,130,0.3)" stroke="#183e78" stroke-width="2.8">
-      <path d="M 0 640 Q 64 590, 128 640 Q 192 690, 256 640 Q 320 590, 384 640 Q 448 690, 512 640 Q 576 590, 640 640 Q 704 690, 768 640 Q 832 590, 896 640 Q 960 690, 1024 640" fill="none"/>
-      <path d="M 0 670 Q 64 620, 128 670 Q 192 720, 256 670 Q 320 620, 384 670 Q 448 720, 512 670 Q 576 620, 640 670 Q 704 720, 768 670 Q 832 620, 896 670 Q 960 720, 1024 670" fill="none"/>
+    <!-- 如意祥云缭绕 -->
+    <g fill="rgba(20,59,117,0.35)" stroke="#143b75" stroke-width="2.8">
+      <path d="M 0 650 Q 64 600, 128 650 Q 192 700, 256 650 Q 320 600, 384 650 Q 448 700, 512 650 Q 576 600, 640 650 Q 704 700, 768 650 Q 832 600, 896 650 Q 960 700, 1024 650" fill="none"/>
     </g>
             """
         elif is_fish:
             # 鱼藻纹：四方游鱼清漪图
             main_motif = """
     <!-- 四方游鱼清漪图 -->
-    <g stroke="#0c2146" stroke-width="3.5" fill="none">
+    <g stroke="#081830" stroke-width="3.5" fill="none">
       <!-- 4 尾灵动游鱼环绕 (x: 128, 384, 640, 896) -->
       <g transform="translate(128, 512)">
-        <path d="M -60 0 C -20 -40, 40 -30, 70 0 C 40 30, -20 40, -60 0 Z" fill="rgba(28,68,130,0.55)"/>
-        <path d="M 70 0 L 110 -25 L 95 0 L 115 25 Z" fill="#183e78"/>
-        <circle cx="-30" cy="-6" r="5" fill="#0c2146"/>
-        <circle cx="-30" cy="-6" r="2" fill="#c9a24f"/>
+        <path d="M -65 0 C -25 -45, 45 -35, 75 0 C 45 35, -25 45, -65 0 Z" fill="rgba(20,59,117,0.6)"/>
+        <path d="M 75 0 L 120 -28 L 105 0 L 125 28 Z" fill="#143b75"/>
+        <circle cx="-35" cy="-8" r="6" fill="#081830"/>
+        <circle cx="-35" cy="-8" r="2.5" fill="#c9a24f"/>
       </g>
-      <g transform="translate(384, 470) scale(0.9) rotate(-15)">
-        <path d="M -60 0 C -20 -40, 40 -30, 70 0 C 40 30, -20 40, -60 0 Z" fill="rgba(28,68,130,0.55)"/>
-        <path d="M 70 0 L 110 -25 L 95 0 L 115 25 Z" fill="#183e78"/>
-        <circle cx="-30" cy="-6" r="5" fill="#0c2146"/>
-        <circle cx="-30" cy="-6" r="2" fill="#c9a24f"/>
+      <g transform="translate(384, 470) scale(0.92) rotate(-15)">
+        <path d="M -65 0 C -25 -45, 45 -35, 75 0 C 45 35, -25 45, -65 0 Z" fill="rgba(20,59,117,0.6)"/>
+        <path d="M 75 0 L 120 -28 L 105 0 L 125 28 Z" fill="#143b75"/>
+        <circle cx="-35" cy="-8" r="6" fill="#081830"/>
+        <circle cx="-35" cy="-8" r="2.5" fill="#c9a24f"/>
       </g>
-      <g transform="translate(640, 530) scale(1.05) rotate(10)">
-        <path d="M -60 0 C -20 -40, 40 -30, 70 0 C 40 30, -20 40, -60 0 Z" fill="rgba(28,68,130,0.55)"/>
-        <path d="M 70 0 L 110 -25 L 95 0 L 115 25 Z" fill="#183e78"/>
-        <circle cx="-30" cy="-6" r="5" fill="#0c2146"/>
-        <circle cx="-30" cy="-6" r="2" fill="#c9a24f"/>
+      <g transform="translate(640, 530) scale(1.05) rotate(12)">
+        <path d="M -65 0 C -25 -45, 45 -35, 75 0 C 45 35, -25 45, -65 0 Z" fill="rgba(20,59,117,0.6)"/>
+        <path d="M 75 0 L 120 -28 L 105 0 L 125 28 Z" fill="#143b75"/>
+        <circle cx="-35" cy="-8" r="6" fill="#081830"/>
+        <circle cx="-35" cy="-8" r="2.5" fill="#c9a24f"/>
       </g>
-      <g transform="translate(896, 480) scale(0.85) rotate(-8)">
-        <path d="M -60 0 C -20 -40, 40 -30, 70 0 C 40 30, -20 40, -60 0 Z" fill="rgba(28,68,130,0.55)"/>
-        <path d="M 70 0 L 110 -25 L 95 0 L 115 25 Z" fill="#183e78"/>
-        <circle cx="-30" cy="-6" r="5" fill="#0c2146"/>
-        <circle cx="-30" cy="-6" r="2" fill="#c9a24f"/>
+      <g transform="translate(896, 480) scale(0.88) rotate(-10)">
+        <path d="M -65 0 C -25 -45, 45 -35, 75 0 C 45 35, -25 45, -65 0 Z" fill="rgba(20,59,117,0.6)"/>
+        <path d="M 75 0 L 120 -28 L 105 0 L 125 28 Z" fill="#143b75"/>
+        <circle cx="-35" cy="-8" r="6" fill="#081830"/>
+        <circle cx="-35" cy="-8" r="2.5" fill="#c9a24f"/>
       </g>
-      <!-- 水草摇曳蔓延 -->
-      <path d="M 0 700 Q 80 500, 30 360 T 90 220" stroke="#183e78" stroke-width="5"/>
-      <path d="M 256 720 Q 320 540, 280 380 T 340 230" stroke="#183e78" stroke-width="5"/>
-      <path d="M 512 700 Q 580 520, 530 370 T 600 220" stroke="#183e78" stroke-width="5"/>
-      <path d="M 768 720 Q 820 540, 780 390 T 850 240" stroke="#183e78" stroke-width="5"/>
-      <path d="M 1024 700 Q 1104 500, 1054 360 T 1114 220" stroke="#183e78" stroke-width="5"/>
+      <!-- 水草浮萍摇曳 -->
+      <path d="M 0 710 Q 80 500, 30 350 T 90 210" stroke="#143b75" stroke-width="5.5"/>
+      <path d="M 256 730 Q 320 530, 280 370 T 340 220" stroke="#143b75" stroke-width="5.5"/>
+      <path d="M 512 710 Q 580 510, 530 360 T 600 210" stroke="#143b75" stroke-width="5.5"/>
+      <path d="M 768 730 Q 820 530, 780 380 T 850 230" stroke="#143b75" stroke-width="5.5"/>
+      <path d="M 1024 710 Q 1104 500, 1054 350 T 1114 210" stroke="#143b75" stroke-width="5.5"/>
     </g>
             """
         else:
-            # 经典生生不息四方连续缠枝宝相花纹 (绝无空白或单调圆圈，四方位均绽放大朵盛开宝相花)
+            # 经典永宣生生不息四方连续缠枝宝相花纹 (绝无旋转椭圆原子模型，正统八瓣尖角宝相大花)
             main_motif = """
-    <!-- 四方连续缠枝宝相花纹 -->
-    <defs>
-      <!-- 盛开八瓣宝相花头组件 -->
-      <g id="full_baoxiang_flower">
-        <!-- 外层八大瓣 (深浓青花铁线勾勒与分水层次) -->
-        <g stroke="#0c2146" stroke-width="3" fill="rgba(28,68,130,0.62)">
-          <path d="M 0 -130 C 35 -90, 35 -50, 0 0 C -35 -50, -35 -90, 0 -130 Z"/>
-          <path d="M 0 130 C 35 90, 35 50, 0 0 C -35 50, -35 90, 0 130 Z"/>
-          <path d="M -130 0 C -90 35, -50 35, 0 0 C -50 -35, -90 -35, -130 0 Z"/>
-          <path d="M 130 0 C 90 35, 50 35, 0 0 C 50 -35, 90 -35, 130 0 Z"/>
-        </g>
-        <!-- 内层斜向四副瓣 (淡浅青花晕染分水) -->
-        <g stroke="#183e78" stroke-width="2.5" fill="rgba(45,95,158,0.48)">
-          <path d="M -90 -90 C -60 -25, -25 -60, 0 0 C -60 -25, -25 -60, -90 -90 Z"/>
-          <path d="M 90 -90 C 60 -25, 25 -60, 0 0 C 60 -25, 25 -60, 90 -90 Z"/>
-          <path d="M -90 90 C -60 25, -25 60, 0 0 C -60 25, -25 60, -90 90 Z"/>
-          <path d="M 90 90 C 60 25, 25 60, 0 0 C 60 25, 25 60, 90 90 Z"/>
-        </g>
-        <!-- 花萼环形勾边 -->
-        <circle cx="0" cy="0" r="140" fill="none" stroke="#0c2146" stroke-width="2.5" stroke-dasharray="8,5"/>
-        <!-- 繁复花蕊：苏麻离青深浓铁锈斑与泥金花心 -->
-        <circle cx="0" cy="0" r="42" fill="#183e78" stroke="#0c2146" stroke-width="3.5"/>
-        <circle cx="0" cy="0" r="24" fill="rgba(28,68,130,0.7)"/>
-        <circle cx="0" cy="0" r="12" fill="#c9a24f"/>
-        <!-- 铁锈斑自然微瑕 -->
-        <circle cx="-14" cy="-12" r="3" fill="#08152c"/>
-        <circle cx="16" cy="10" r="3" fill="#08152c"/>
-        <circle cx="10" cy="-15" r="2.5" fill="#08152c"/>
-        <circle cx="-12" cy="14" r="2.5" fill="#08152c"/>
-      </g>
-      <!-- 卷草舒卷侧叶 -->
-      <g id="scrolling_leaf">
-        <path d="M 0 0 C 35 -35, 75 -25, 95 5 C 65 25, 30 25, 0 0 Z" fill="rgba(28,68,130,0.55)" stroke="#0c2146" stroke-width="2.5"/>
-        <path d="M 0 0 Q 45 -10, 80 0" stroke="#183e78" stroke-width="2" fill="none"/>
-      </g>
-    </defs>
-
+    <!-- 四方连续缠枝宝相花主纹 (首尾高度 512 严格平齐相接) -->
     <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <!-- 缠枝双线大藤蔓连绵无缝贯穿 (波长 512，两周期平铺 1024，两端高度与切线严格连续) -->
-      <path d="M 0 512 C 128 410, 128 614, 256 512 C 384 410, 384 614, 512 512 C 640 410, 640 614, 768 512 C 896 410, 896 614, 1024 512" stroke="#0c2146" stroke-width="7"/>
-      <path d="M 0 512 C 128 614, 128 410, 256 512 C 384 614, 384 410, 512 512 C 640 614, 640 410, 768 512 C 896 614, 896 410, 1024 512" stroke="#183e78" stroke-width="3.5" stroke-dasharray="14,7"/>
+      <!-- 缠枝主干藤蔓 (波长 512，两周期平铺 1024) -->
+      <path d="M 0 512 C 128 390, 128 634, 256 512 C 384 390, 384 634, 512 512 C 640 390, 640 634, 768 512 C 896 390, 896 634, 1024 512" stroke="#081830" stroke-width="7"/>
+      <path d="M 0 512 C 128 634, 128 390, 256 512 C 384 634, 384 390, 512 512 C 640 634, 640 390, 768 512 C 896 634, 896 390, 1024 512" stroke="#143b75" stroke-width="3.5" stroke-dasharray="16,8"/>
 
-      <!-- 四大盛开宝相花 (四方连续：x=512 正面大花，x=256 与 768 侧翼大花，x=0 与 1024 背面闭合大花) -->
-      <use href="#full_baoxiang_flower" x="512" y="512"/>
-      <use href="#full_baoxiang_flower" x="256" y="512" transform="scale(0.85) translate(45, 90)"/>
-      <use href="#full_baoxiang_flower" x="768" y="512" transform="scale(0.85) translate(-45, 90)"/>
-      <use href="#full_baoxiang_flower" x="0" y="512"/>
-      <use href="#full_baoxiang_flower" x="1024" y="512"/>
+      <!-- 四大盛开宝相大花 (x=512 正面主花，x=256 与 768 侧翼大花，x=0 与 1024 背面闭合大花) -->
+      <use href="#full_baoxiang_medallion" x="512" y="512"/>
+      <use href="#full_baoxiang_medallion" x="256" y="512" transform="scale(0.88) translate(40, 70)"/>
+      <use href="#full_baoxiang_medallion" x="768" y="512" transform="scale(0.88) translate(-40, 70)"/>
+      <use href="#full_baoxiang_medallion" x="0" y="512"/>
+      <use href="#full_baoxiang_medallion" x="1024" y="512"/>
 
-      <!-- 繁茂卷叶点缀于藤蔓波峰波谷 -->
-      <use href="#scrolling_leaf" x="128" y="440" transform="rotate(-30 128 440) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="128" y="584" transform="rotate(150 128 584) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="384" y="440" transform="rotate(-30 384 440) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="384" y="584" transform="rotate(150 384 584) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="640" y="440" transform="rotate(-30 640 440) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="640" y="584" transform="rotate(150 640 584) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="896" y="440" transform="rotate(-30 896 440) scale(1.1)"/>
-      <use href="#scrolling_leaf" x="896" y="584" transform="rotate(150 896 584) scale(1.1)"/>
+      <!-- 繁茂西番莲卷叶点缀于藤蔓波峰波谷 -->
+      <use href="#scrolling_acanthus_leaf" x="128" y="420" transform="rotate(-30 128 420) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="128" y="604" transform="rotate(150 128 604) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="384" y="420" transform="rotate(-30 384 420) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="384" y="604" transform="rotate(150 384 604) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="640" y="420" transform="rotate(-30 640 420) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="640" y="604" transform="rotate(150 640 604) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="896" y="420" transform="rotate(-30 896 420) scale(1.15)"/>
+      <use href="#scrolling_acanthus_leaf" x="896" y="604" transform="rotate(150 896 604) scale(1.15)"/>
+
+      <!-- 含苞折枝花蕾 -->
+      <use href="#flower_bud" x="128" y="360" transform="rotate(-15 128 360)"/>
+      <use href="#flower_bud" x="384" y="660" transform="rotate(165 384 660)"/>
+      <use href="#flower_bud" x="640" y="360" transform="rotate(-15 640 360)"/>
+      <use href="#flower_bud" x="896" y="660" transform="rotate(165 896 660)"/>
     </g>
             """
 
         return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- 1. 颈部口沿带：弦纹与回纹 (y: 20 ~ 130) -->
-  <g stroke="#0c2146" stroke-width="4" fill="none">
+  <defs>
+    <!-- 分水晕染渐变色谱 (还原宣德苏麻离青发色与铁锈斑) -->
+    <radialGradient id="cobalt_wash_grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#081830" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#143b75" stop-opacity="0.85"/>
+      <stop offset="70%" stop-color="#235ea8" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#3d7ec9" stop-opacity="0.25"/>
+    </radialGradient>
+    <linearGradient id="leaf_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1e3d" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#1e4d94" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#3975c6" stop-opacity="0.35"/>
+    </linearGradient>
+    <radialGradient id="ruyi_grad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#143b75" stop-opacity="0.8"/>
+      <stop offset="80%" stop-color="#2a66b5" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#4d89d6" stop-opacity="0.2"/>
+    </radialGradient>
+
+    <!-- 1. 尖角重瓣宝相莲瓣组件 (严格杜绝旋转椭圆) -->
+    <g id="baoxiang_petal">
+      <path d="M 0 0 C -36 -42, -48 -95, 0 -140 C 48 -95, 36 -42, 0 0 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="3.2"/>
+      <path d="M 0 -18 C -22 -48, -28 -82, 0 -118 C 28 -82, 22 -48, 0 -18 Z" fill="rgba(20,59,117,0.55)" stroke="#143b75" stroke-width="1.8"/>
+      <path d="M 0 -22 L 0 -130" stroke="#050e1c" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M 0 -55 Q -14 -72, -26 -85 M 0 -55 Q 14 -72, 26 -85" stroke="#0c254d" stroke-width="1.2" fill="none"/>
+      <path d="M 0 -85 Q -12 -98, -18 -108 M 0 -85 Q 12 -98, 18 -108" stroke="#0c254d" stroke-width="1.2" fill="none"/>
+      <circle cx="-6" cy="-105" r="2.5" fill="#040912"/>
+      <circle cx="8" cy="-88" r="2.2" fill="#040912"/>
+    </g>
+
+    <!-- 2. 卷草牡丹副瓣组件 -->
+    <g id="peony_scroll_lobe">
+      <path d="M 0 -60 C -30 -75, -45 -115, -15 -135 C 0 -110, 10 -90, 0 -60 Z" fill="rgba(24,62,120,0.6)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 0 -60 C 30 -75, 45 -115, 15 -135 C 0 -110, -10 -90, 0 -60 Z" fill="rgba(24,62,120,0.6)" stroke="#081830" stroke-width="2.5"/>
+      <circle cx="0" cy="-132" r="3.5" fill="#c9a24f"/>
+    </g>
+
+    <!-- 3. 盛开八瓣宝相花组合勋章 (正统御窑宝相花) -->
+    <g id="full_baoxiang_medallion">
+      <use href="#peony_scroll_lobe" transform="rotate(22.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(67.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(112.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(157.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(202.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(247.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(292.5)"/>
+      <use href="#peony_scroll_lobe" transform="rotate(337.5)"/>
+
+      <use href="#baoxiang_petal"/>
+      <use href="#baoxiang_petal" transform="rotate(45)"/>
+      <use href="#baoxiang_petal" transform="rotate(90)"/>
+      <use href="#baoxiang_petal" transform="rotate(135)"/>
+      <use href="#baoxiang_petal" transform="rotate(180)"/>
+      <use href="#baoxiang_petal" transform="rotate(225)"/>
+      <use href="#baoxiang_petal" transform="rotate(270)"/>
+      <use href="#baoxiang_petal" transform="rotate(315)"/>
+
+      <!-- 花心花蕊：如意云头与泥金珍珠蕊 -->
+      <circle cx="0" cy="0" r="50" fill="#143b75" stroke="#081830" stroke-width="3.5"/>
+      <path d="M -24 0 C -24 -20, 0 -24, 0 0 C 0 -24, 24 -20, 24 0 C 20 24, 0 24, 0 0 C 0 24, -20 24, -24 0 Z" fill="rgba(35,94,168,0.75)" stroke="#081830" stroke-width="2"/>
+      <circle cx="0" cy="0" r="22" fill="#081830"/>
+      <circle cx="0" cy="0" r="14" fill="#c9a24f" stroke="#050e1c" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="6" fill="#040912"/>
+
+      <circle cx="-34" cy="0" r="3" fill="#c9a24f"/>
+      <circle cx="34" cy="0" r="3" fill="#c9a24f"/>
+      <circle cx="0" cy="-34" r="3" fill="#c9a24f"/>
+      <circle cx="0" cy="34" r="3" fill="#c9a24f"/>
+      <circle cx="-24" cy="-24" r="2.5" fill="#c9a24f"/>
+      <circle cx="24" cy="-24" r="2.5" fill="#c9a24f"/>
+      <circle cx="-24" cy="24" r="2.5" fill="#c9a24f"/>
+      <circle cx="24" cy="24" r="2.5" fill="#c9a24f"/>
+    </g>
+
+    <!-- 4. 舒展西番莲卷叶组件 -->
+    <g id="scrolling_acanthus_leaf">
+      <path d="M 0 0 C 25 -30, 65 -25, 90 0 C 110 -15, 125 15, 105 35 C 80 50, 45 40, 25 25 C 10 32, -5 20, 0 0 Z" fill="url(#leaf_grad)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 5 2 Q 55 10, 105 35" stroke="#050e1c" stroke-width="2" fill="none"/>
+      <path d="M 35 7 Q 50 -10, 75 -5 M 65 14 Q 85 0, 105 5 M 45 15 Q 60 30, 80 35" stroke="#0c254d" stroke-width="1.2" fill="none"/>
+    </g>
+
+    <!-- 5. 含苞折枝花蕾组件 -->
+    <g id="flower_bud">
+      <path d="M 0 0 C -15 -20, -18 -45, 0 -60 C 18 -45, 15 -20, 0 0 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2"/>
+      <path d="M -12 -15 Q -25 -35, -15 -50" stroke="#081830" stroke-width="2" fill="none"/>
+      <path d="M 12 -15 Q 25 -35, 15 -50" stroke="#081830" stroke-width="2" fill="none"/>
+      <circle cx="0" cy="-62" r="3.5" fill="#c9a24f"/>
+    </g>
+
+    <!-- 6. 肩部如意云头纹单元 -->
+    <g id="ruyi_cloud_unit">
+      <path d="M -64 0 C -64 -60, -20 -70, 0 -45 C 20 -70, 64 -60, 64 0 C 40 25, 0 35, 0 -10 C 0 35, -40 25, -64 0 Z" fill="url(#ruyi_grad)" stroke="#081830" stroke-width="3"/>
+      <circle cx="0" cy="40" r="6" fill="#081830"/>
+      <circle cx="0" cy="55" r="4.5" fill="#c9a24f"/>
+    </g>
+  </defs>
+
+  <!-- 1. 颈部口沿弦纹与连续回纹带 (y: 20 ~ 130) -->
+  <g stroke="#081830" fill="none">
     <line x1="0" y1="30" x2="1024" y2="30" stroke-width="5"/>
-    <line x1="0" y1="50" x2="1024" y2="50" stroke-width="2"/>
-    <!-- 连续回纹带 (16 单位等分平铺) -->
-    <path d="M 0 80 H 64 V 110 H 32 V 95 H 48 M 64 80 H 128 V 110 H 96 V 95 H 112 M 128 80 H 192 V 110 H 160 V 95 H 176 M 192 80 H 256 V 110 H 224 V 95 H 240 M 256 80 H 320 V 110 H 288 V 95 H 304 M 320 80 H 384 V 110 H 352 V 95 H 368 M 384 80 H 448 V 110 H 416 V 95 H 432 M 448 80 H 512 V 110 H 480 V 95 H 496 M 512 80 H 576 V 110 H 544 V 95 H 560 M 576 80 H 640 V 110 H 608 V 95 H 624 M 640 80 H 704 V 110 H 672 V 95 H 688 M 704 80 H 768 V 110 H 736 V 95 H 752 M 768 80 H 832 V 110 H 800 V 95 H 816 M 832 80 H 896 V 110 H 864 V 95 H 880 M 896 80 H 960 V 110 H 928 V 95 H 944 M 960 80 H 1024 V 110 H 992 V 95 H 1008" stroke="#183e78" stroke-width="2.5"/>
-    <line x1="0" y1="130" x2="1024" y2="130" stroke-width="3"/>
+    <line x1="0" y1="48" x2="1024" y2="48" stroke-width="2"/>
+    <!-- 连续回字纹 (16 单位全宽贯穿) -->
+    <path d="M 0 78 H 64 V 108 H 32 V 93 H 48 M 64 78 H 128 V 108 H 96 V 93 H 112 M 128 78 H 192 V 108 H 160 V 93 H 176 M 192 78 H 256 V 108 H 224 V 93 H 240 M 256 78 H 320 V 108 H 288 V 93 H 304 M 320 78 H 384 V 108 H 352 V 93 H 368 M 384 78 H 448 V 108 H 416 V 93 H 432 M 448 78 H 512 V 108 H 480 V 93 H 496 M 512 78 H 576 V 108 H 544 V 93 H 560 M 576 78 H 640 V 108 H 608 V 93 H 624 M 640 78 H 704 V 110 H 672 V 95 H 688 M 704 78 H 768 V 108 H 736 V 93 H 752 M 768 78 H 832 V 108 H 800 V 93 H 816 M 832 78 H 896 V 108 H 864 V 93 H 880 M 896 78 H 960 V 108 H 928 V 93 H 944 M 960 78 H 1024 V 108 H 992 V 93 H 1008" stroke="#143b75" stroke-width="2.5"/>
+    <line x1="0" y1="128" x2="1024" y2="128" stroke-width="3"/>
   </g>
 
-  <!-- 2. 肩部如意云头纹饰带 (y: 150 ~ 280) -->
-  <g fill="rgba(28,68,130,0.38)" stroke="#0c2146" stroke-width="3.5">
-    <path d="M 0 160 Q 64 260, 128 200 Q 192 260, 256 160 Q 320 260, 384 200 Q 448 260, 512 160 Q 576 260, 640 200 Q 704 260, 768 160 Q 832 260, 896 200 Q 960 260, 1024 160 L 1024 140 L 0 140 Z"/>
-    <!-- 云肩垂珠点缀 -->
-    <circle cx="128" cy="230" r="7" fill="#0c2146"/>
-    <circle cx="384" cy="230" r="7" fill="#0c2146"/>
-    <circle cx="640" cy="230" r="7" fill="#0c2146"/>
-    <circle cx="896" cy="230" r="7" fill="#0c2146"/>
+  <!-- 2. 肩部如意云肩垂珠带 (y: 150 ~ 290) (8 云头等分平铺) -->
+  <g>
+    <use href="#ruyi_cloud_unit" x="64" y="210"/>
+    <use href="#ruyi_cloud_unit" x="192" y="210"/>
+    <use href="#ruyi_cloud_unit" x="320" y="210"/>
+    <use href="#ruyi_cloud_unit" x="448" y="210"/>
+    <use href="#ruyi_cloud_unit" x="576" y="210"/>
+    <use href="#ruyi_cloud_unit" x="704" y="210"/>
+    <use href="#ruyi_cloud_unit" x="832" y="210"/>
+    <use href="#ruyi_cloud_unit" x="960" y="210"/>
+    <line x1="0" y1="285" x2="1024" y2="285" stroke="#081830" stroke-width="3"/>
+    <line x1="0" y1="295" x2="1024" y2="295" stroke="#143b75" stroke-width="1.8"/>
   </g>
 
-  <!-- 3. 腹部核心主题纹饰 (y: 300 ~ 740) -->
+  <!-- 3. 腹部核心主题纹饰 (y: 320 ~ 740) -->
   {main_motif}
 
-  <!-- 4. 足胫部装饰带：仰莲瓣纹 (y: 780 ~ 980) -->
-  <g stroke="#0c2146" stroke-width="3.5" fill="rgba(28,68,130,0.35)">
-    <line x1="0" y1="780" x2="1024" y2="780" stroke-width="4"/>
-    <!-- 仰覆莲瓣阵列 -->
-    <path d="M 0 940 C 32 820, 96 820, 128 940 Z M 128 940 C 160 820, 224 820, 256 940 Z M 256 940 C 288 820, 352 820, 384 940 Z M 384 940 C 416 820, 480 820, 512 940 Z M 512 940 C 544 820, 608 820, 640 940 Z M 640 940 C 672 820, 736 820, 768 940 Z M 768 940 C 800 820, 864 820, 896 940 Z M 896 940 C 928 820, 992 820, 1024 940 Z"/>
-    <!-- 莲瓣内圈花纹 -->
-    <path d="M 32 940 C 48 870, 80 870, 96 940 M 160 940 C 176 870, 208 870, 224 940 M 288 940 C 304 870, 336 870, 352 940 M 416 940 C 432 870, 464 870, 480 940 M 544 940 C 560 870, 592 870, 608 940 M 672 940 C 688 870, 720 870, 736 940 M 800 940 C 816 870, 848 870, 864 940 M 928 940 C 944 870, 976 870, 992 940" stroke="#183e78" stroke-width="2" fill="none"/>
-    <line x1="0" y1="960" x2="1024" y2="960" stroke-width="6"/>
+  <!-- 4. 足胫部装饰带：仰覆双重莲瓣与海水江崖 (y: 770 ~ 980) -->
+  <g stroke="#081830" stroke-width="3.5" fill="rgba(20,59,117,0.42)">
+    <line x1="0" y1="765" x2="1024" y2="765" stroke-width="4"/>
+    <line x1="0" y1="775" x2="1024" y2="775" stroke-width="2"/>
+    <!-- 16 朵仰覆双重莲瓣 -->
+    <path d="M 0 920 C 32 800, 96 800, 128 920 Z M 128 920 C 160 800, 224 800, 256 920 Z M 256 920 C 288 800, 352 800, 384 920 Z M 384 920 C 416 800, 480 800, 512 920 Z M 512 920 C 544 800, 608 800, 640 920 Z M 640 920 C 672 800, 736 800, 768 920 Z M 768 920 C 800 800, 864 800, 896 920 Z M 896 920 C 928 800, 992 800, 1024 920 Z"/>
+    <path d="M 32 920 C 48 850, 80 850, 96 920 M 160 920 C 176 850, 208 850, 224 920 M 288 920 C 304 850, 336 850, 352 920 M 416 920 C 432 850, 464 850, 480 920 M 544 920 C 560 850, 592 850, 608 920 M 672 920 C 688 850, 720 850, 736 920 M 800 920 C 816 850, 848 850, 864 920 M 928 920 C 944 850, 976 850, 992 920" stroke="#143b75" stroke-width="2" fill="none"/>
+    <line x1="0" y1="945" x2="1024" y2="945" stroke-width="5"/>
+
+    <!-- 海水江崖波涛纹底界 -->
+    <path d="M 0 970 Q 32 945, 64 970 Q 96 995, 128 970 Q 160 945, 192 970 Q 224 995, 256 970 Q 288 945, 320 970 Q 352 995, 384 970 Q 416 945, 448 970 Q 480 995, 512 970 Q 544 945, 576 970 Q 608 995, 640 970 Q 672 945, 704 970 Q 736 995, 768 970 Q 800 945, 832 970 Q 864 995, 896 970 Q 928 945, 960 970 Q 992 995, 1024 970" fill="none" stroke="#143b75" stroke-width="3"/>
+    <line x1="0" y1="995" x2="1024" y2="995" stroke="#081830" stroke-width="6"/>
   </g>
 </svg>"""
