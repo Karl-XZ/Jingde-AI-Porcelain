@@ -1,6 +1,11 @@
 import { useState, useRef } from 'react'
 import { PotteryCanvas, type PotteryCanvasHandle } from './pottery/PotteryCanvas'
-import { LandingPorcelain3D, type ShowcaseGlaze, type SyncVaseState } from './components/LandingPorcelain3D'
+import {
+  LandingPorcelain3D,
+  SHOWCASE_PATTERNS,
+  type ShowcasePattern,
+  type SyncVaseState,
+} from './components/LandingPorcelain3D'
 import { LandingBgPorcelain3D } from './components/LandingBgPorcelain3D'
 import { CraftGuidePage } from './pages/CraftGuidePage'
 import { GalleryPage, type RemakeConfig } from './pages/GalleryPage'
@@ -188,8 +193,8 @@ export default function App() {
   const [messages, setMessages] = useState<Msg[]>(() => [{ role: 'ai', html: AI[INIT_STEP].greet }])
 
   // 首页 3D 前景展台与背景巨型半透明陶瓷同步引用
-  const syncVaseRef = useRef<SyncVaseState>({ y: 0, tilt: 0.08, glaze: 'qing' })
-  const [landingGlaze, setLandingGlaze] = useState<ShowcaseGlaze>('qing')
+  const syncVaseRef = useRef<SyncVaseState>({ y: 0, tilt: 0.08, pattern: 'lotus', glaze: 'lotus' })
+  const [landingPattern, setLandingPattern] = useState<ShowcasePattern>('lotus')
 
   // 统一 3D 瓷器控制状态 (唯一真理来源)
   const [activePreset, setActivePreset] = useState<PresetType>('meiping')
@@ -215,7 +220,25 @@ export default function App() {
     setMeasuredRim(r)
   }
 
-  function enterWorkshop() {
+  function enterWorkshop(pattern?: ShowcasePattern) {
+    const targetPattern = pattern || landingPattern
+    if (targetPattern && SHOWCASE_PATTERNS[targetPattern]) {
+      const info = SHOWCASE_PATTERNS[targetPattern]
+      setActiveMotif(info.motif)
+      setActivePreset('meiping')
+      setHeightScale(info.heightScale)
+      setRimScale(info.rimScale)
+      setBellyScale(info.bellyScale)
+      setCurStep('pattern')
+      setPageView('workshop')
+      setTimeout(() => {
+        canvasRef.current?.loadPreset('meiping')
+        canvasRef.current?.applyMotif(info.motif)
+        canvasRef.current?.setGlaze('gloss')
+      }, 100)
+      toast(`已导入【${info.name}】御窑经典款式！`)
+      return
+    }
     setPageView('workshop')
   }
 
@@ -1376,7 +1399,7 @@ export default function App() {
         {/* 首页背景：与前台完全同步旋转的巨型半透明 3D 陶瓷 */}
         <LandingBgPorcelain3D
           syncVaseRef={syncVaseRef}
-          currentGlaze={landingGlaze}
+          currentPattern={landingPattern}
         />
 
         <div className="landing-wrap">
@@ -1391,7 +1414,7 @@ export default function App() {
               让传统柴窑工艺在数字空间中获得永续生命。
             </p>
             <div className="landing-actions">
-              <button className="btn-primary" onClick={enterWorkshop}>
+              <button className="btn-primary" onClick={() => enterWorkshop(landingPattern)}>
                 <span>进入工坊</span>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -1410,8 +1433,8 @@ export default function App() {
             <LandingPorcelain3D
               onEnterWorkshop={enterWorkshop}
               syncVaseRef={syncVaseRef}
-              onGlazeChange={setLandingGlaze}
-              selectedGlaze={landingGlaze}
+              onPatternChange={setLandingPattern}
+              selectedPattern={landingPattern}
             />
           </div>
         </div>

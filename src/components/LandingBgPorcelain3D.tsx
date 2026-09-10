@@ -1,28 +1,29 @@
 import { useEffect, useRef, useCallback } from 'react'
 import * as THREE from 'three'
 import { PotteryGeometryBuilder } from '../pottery/PotteryGeometry'
+import { renderQinghuaMotif } from '../pottery/patterns'
 import {
-  renderQinghuaMotif,
-  generateLangyaoCanvas,
-  generateHuayouCanvas,
-  generateChayemoCanvas,
-  type MotifType,
-} from '../pottery/patterns'
-import type { ShowcaseGlaze, SyncVaseState } from './LandingPorcelain3D'
+  SHOWCASE_PATTERNS,
+  type ShowcasePattern,
+  type ShowcaseGlaze,
+  type SyncVaseState,
+} from './LandingPorcelain3D'
 
 interface LandingBgPorcelain3DProps {
   syncVaseRef?: React.MutableRefObject<SyncVaseState>
   currentGlaze?: ShowcaseGlaze
+  currentPattern?: ShowcasePattern
 }
 
 /**
  * 首页背景巨型半透明 3D 陶瓷
- * 与前台 3D 展台陶瓷保持绝对 1:1 同步旋转、同一器型、同一釉色；
+ * 与前台 3D 展台陶瓷保持绝对 1:1 同步旋转、同一器型、同一经典纹样款式；
  * 采用半透明玉质/琉璃材质与窑火底光照明，形成磅礴宏大的虚实相生意境。
  */
 export function LandingBgPorcelain3D({
   syncVaseRef,
-  currentGlaze = 'qing',
+  currentGlaze,
+  currentPattern = 'lotus',
 }: LandingBgPorcelain3DProps) {
   const mountRef = useRef<HTMLDivElement>(null)
 
@@ -34,45 +35,34 @@ export function LandingBgPorcelain3D({
   const bgMeshRef = useRef<THREE.Mesh | null>(null)
   const animFrameRef = useRef<number | null>(null)
 
+  const builderRef = useRef<PotteryGeometryBuilder | null>(null)
   // 纹理材质缓存
-  const texturesRef = useRef<Record<ShowcaseGlaze, THREE.CanvasTexture | null>>({
-    qing: null,
-    lang: null,
-    hua: null,
-    cha: null,
-  })
+  const texturesRef = useRef<Record<string, THREE.CanvasTexture | null>>({})
 
-  const currentGlazeRef = useRef(currentGlaze)
+  const activePattern = (currentPattern || currentGlaze || 'lotus') as ShowcasePattern
+  const currentPatternRef = useRef<ShowcasePattern>(activePattern)
   useEffect(() => {
-    currentGlazeRef.current = currentGlaze
-  }, [currentGlaze])
+    currentPatternRef.current = (currentPattern || currentGlaze || 'lotus') as ShowcasePattern
+  }, [currentPattern, currentGlaze])
 
-  // 1. 生成或获取名釉高精度贴图
-  const getTexture = useCallback((glaze: ShowcaseGlaze): THREE.CanvasTexture => {
-    if (texturesRef.current[glaze]) {
-      return texturesRef.current[glaze]!
+  // 1. 生成或获取经典纹样高精度贴图
+  const getTexture = useCallback((patternKey: string): THREE.CanvasTexture => {
+    if (texturesRef.current[patternKey]) {
+      return texturesRef.current[patternKey]!
     }
 
-    let canvas: HTMLCanvasElement
-    if (glaze === 'qing') {
-      canvas = document.createElement('canvas')
-      canvas.width = 1024
-      canvas.height = 1024
-      const ctx = canvas.getContext('2d')
-      if (ctx) renderQinghuaMotif(ctx, 1024, 1024, 'lotus' as MotifType)
-    } else if (glaze === 'lang') {
-      canvas = generateLangyaoCanvas(1024, 1024)
-    } else if (glaze === 'hua') {
-      canvas = generateHuayouCanvas(1024, 1024)
-    } else {
-      canvas = generateChayemoCanvas(1024, 1024)
-    }
+    const info = SHOWCASE_PATTERNS[patternKey as ShowcasePattern] || SHOWCASE_PATTERNS.lotus
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 1024
+    const ctx = canvas.getContext('2d')
+    if (ctx) renderQinghuaMotif(ctx, 1024, 1024, info.motif)
 
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
     texture.needsUpdate = true
-    texturesRef.current[glaze] = texture
+    texturesRef.current[patternKey] = texture
     return texture
   }, [])
 
@@ -139,11 +129,14 @@ export function LandingBgPorcelain3D({
     // 构建与前台完全一致的经典官窑梅瓶
     const builder = new PotteryGeometryBuilder(56, 56, 14.2, 0.45)
     builder.loadPreset('meiping')
-    builder.adjustParameters(1.05, 0.96, 1.06)
+    builderRef.current = builder
+    const curPattern = currentPatternRef.current
+    const info = SHOWCASE_PATTERNS[curPattern] || SHOWCASE_PATTERNS.lotus
+    builder.adjustParameters(info.heightScale, info.rimScale, info.bellyScale)
     const vaseGeometry = builder.buildGeometry()
     vaseGeometry.computeVertexNormals()
 
-    const initialTexture = getTexture(currentGlazeRef.current)
+    const initialTexture = getTexture(curPattern)
     const vaseMaterial = new THREE.MeshPhysicalMaterial({
       map: initialTexture,
       color: 0xffffff,
@@ -175,6 +168,21 @@ export function LandingBgPorcelain3D({
         if (syncVaseRef?.current) {
           bgGroup.rotation.y = syncVaseRef.current.y
           bgGroup.rotation.x = syncVaseRef.current.tilt * 0.4
+
+          // 检查前台 pattern 是否切换，同步背景
+          const syncKey = (syncVaseRef.current.pattern || syncVaseRef.current.glaze) as ShowcasePattern | undefined
+          if (syncKey && syncKey !== currentPatternRef.current && bgMeshRef.current && builderRef.current) {
+            currentPatternRef.current = syncKey
+            const synInfo = SHOWCASE_PATTERNS[syncKey] || SHOWCASE_PATTERNS.lotus
+            const mat = bgMeshRef.current.material as THREE.MeshPhysicalMaterial
+            mat.map = getTexture(syncKey)
+            mat.needsUpdate = true
+            builderRef.current.adjustParameters(synInfo.heightScale, synInfo.rimScale, synInfo.bellyScale)
+            const newGeom = builderRef.current.buildGeometry()
+            newGeom.computeVertexNormals()
+            bgMeshRef.current.geometry.dispose()
+            bgMeshRef.current.geometry = newGeom
+          }
         } else {
           bgGroup.rotation.y += 0.0055
         }
@@ -216,14 +224,21 @@ export function LandingBgPorcelain3D({
     }
   }, [getTexture, syncVaseRef])
 
-  // 3. 动态响应前台切换釉色
+  // 3. 动态响应前台切换纹样款式
   useEffect(() => {
-    if (!bgMeshRef.current) return
+    if (!bgMeshRef.current || !builderRef.current) return
+    const key = (currentPattern || currentGlaze || 'lotus') as ShowcasePattern
+    const info = SHOWCASE_PATTERNS[key] || SHOWCASE_PATTERNS.lotus
     const mat = bgMeshRef.current.material as THREE.MeshPhysicalMaterial
-    const tex = getTexture(currentGlaze)
-    mat.map = tex
+    mat.map = getTexture(key)
     mat.needsUpdate = true
-  }, [currentGlaze, getTexture])
+
+    builderRef.current.adjustParameters(info.heightScale, info.rimScale, info.bellyScale)
+    const newGeom = builderRef.current.buildGeometry()
+    newGeom.computeVertexNormals()
+    bgMeshRef.current.geometry.dispose()
+    bgMeshRef.current.geometry = newGeom
+  }, [currentPattern, currentGlaze, getTexture])
 
   return (
     <div className="landing-bg-porcelain-wrapper">

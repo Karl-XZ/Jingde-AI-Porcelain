@@ -727,6 +727,10 @@
   border-radius: 50%;
 }
 
+.pill-color-dot.lotus { background: #183e78; border: 1px solid #4a8fcf; box-shadow: 0 0 5px rgba(42, 107, 185, 0.6); }
+.pill-color-dot.dragon { background: #0c2146; border: 1px solid #6ba3e8; box-shadow: 0 0 5px rgba(25, 65, 125, 0.6); }
+.pill-color-dot.fish { background: #2671b5; border: 1px solid #7bc5f5; box-shadow: 0 0 5px rgba(58, 150, 230, 0.6); }
+.pill-color-dot.ice { background: #8b1e1e; border: 1px solid #e08b6a; box-shadow: 0 0 5px rgba(180, 50, 50, 0.6); }
 .pill-color-dot.qing { background: #1c4570; border: 1px solid #4a8fcf; }
 .pill-color-dot.lang { background: #8b1e1e; border: 1px solid #f6914f; }
 .pill-color-dot.hua { background: #6c3f85; border: 1px solid #9c68b6; }

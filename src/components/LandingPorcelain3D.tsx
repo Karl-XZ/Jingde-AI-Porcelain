@@ -3,42 +3,129 @@ import * as THREE from 'three'
 import { PotteryGeometryBuilder } from '../pottery/PotteryGeometry'
 import {
   renderQinghuaMotif,
-  generateLangyaoCanvas,
-  generateHuayouCanvas,
-  generateChayemoCanvas,
   type MotifType,
 } from '../pottery/patterns'
 
-export type ShowcaseGlaze = 'qing' | 'lang' | 'hua' | 'cha'
+export type ShowcasePattern = 'lotus' | 'dragon' | 'fish' | 'ice'
+export type ShowcaseGlaze = ShowcasePattern
+
+export interface ShowcasePatternInfo {
+  id: ShowcasePattern
+  name: string
+  fullName: string
+  dynasty: string
+  desc: string
+  motif: MotifType
+  dotColor: string
+  heightScale: number
+  rimScale: number
+  bellyScale: number
+  roughness: number
+  clearcoat: number
+  clearcoatRoughness: number
+  metalness: number
+}
+
+export const SHOWCASE_PATTERNS: Record<ShowcasePattern, ShowcasePatternInfo> = {
+  lotus: {
+    id: 'lotus',
+    name: '青花缠枝莲',
+    fullName: '景德镇御窑 · 青花缠枝莲梅瓶',
+    dynasty: '明 永乐·宣德',
+    desc: '苏麻离青幽靓浓艳，八宝缠枝连绵不绝，生生不息',
+    motif: 'lotus',
+    dotColor: '#183e78',
+    heightScale: 1.05,
+    rimScale: 0.96,
+    bellyScale: 1.06,
+    roughness: 0.05,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.04,
+    metalness: 0.02,
+  },
+  dragon: {
+    id: 'dragon',
+    name: '御窑云水龙',
+    fullName: '景德镇御窑 · 青花云水龙纹梅瓶',
+    dynasty: '明 宣德·嘉靖',
+    desc: '苍龙腾云破雾，五爪矫健气吞山河，御制皇家威仪',
+    motif: 'dragon',
+    dotColor: '#0c2146',
+    heightScale: 1.15,
+    rimScale: 1.04,
+    bellyScale: 1.15,
+    roughness: 0.05,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.04,
+    metalness: 0.02,
+  },
+  fish: {
+    id: 'fish',
+    name: '鱼藻清漪图',
+    fullName: '景德镇御窑 · 青花鱼藻纹梅瓶',
+    dynasty: '明 宣德·成化',
+    desc: '游鱼戏藻清漪微澜，成化文人秀雅意趣，灵动悠然',
+    motif: 'fish',
+    dotColor: '#2671b5',
+    heightScale: 1.02,
+    rimScale: 0.90,
+    bellyScale: 0.98,
+    roughness: 0.06,
+    clearcoat: 0.98,
+    clearcoatRoughness: 0.05,
+    metalness: 0.02,
+  },
+  ice: {
+    id: 'ice',
+    name: '冰裂散点梅',
+    fullName: '御窑仿古 · 哥窑冰裂折枝梅瓶',
+    dynasty: '宋·元 仿哥窑',
+    desc: '金丝铁线冰裂开片，朱砂折枝红梅暗香浮动，清奇古雅',
+    motif: 'ice',
+    dotColor: '#8b1e1e',
+    heightScale: 0.98,
+    rimScale: 1.08,
+    bellyScale: 1.10,
+    roughness: 0.08,
+    clearcoat: 0.95,
+    clearcoatRoughness: 0.06,
+    metalness: 0.03,
+  },
+}
 
 export interface SyncVaseState {
   y: number
   tilt: number
-  glaze: ShowcaseGlaze
+  pattern?: ShowcasePattern
+  glaze?: ShowcasePattern
 }
 
 interface LandingPorcelain3DProps {
-  onEnterWorkshop?: () => void
+  onEnterWorkshop?: (pattern?: ShowcasePattern) => void
   syncVaseRef?: React.MutableRefObject<SyncVaseState>
-  onGlazeChange?: (glaze: ShowcaseGlaze) => void
-  selectedGlaze?: ShowcaseGlaze
+  onPatternChange?: (pattern: ShowcasePattern) => void
+  onGlazeChange?: (glaze: ShowcasePattern) => void
+  selectedPattern?: ShowcasePattern
+  selectedGlaze?: ShowcasePattern
 }
 
 export function LandingPorcelain3D({
   onEnterWorkshop,
   syncVaseRef,
+  onPatternChange,
   onGlazeChange,
+  selectedPattern: propPattern,
   selectedGlaze: propGlaze,
 }: LandingPorcelain3DProps) {
   const mountRef = useRef<HTMLDivElement>(null)
-  const [internalGlaze, setInternalGlaze] = useState<ShowcaseGlaze>('qing')
-  const selectedGlaze = propGlaze ?? internalGlaze
+  const [internalPattern, setInternalPattern] = useState<ShowcasePattern>('lotus')
+  const selectedPattern: ShowcasePattern = propPattern ?? propGlaze ?? internalPattern
   const [isHovered, setIsHovered] = useState(false)
 
-  const selectedGlazeRef = useRef(selectedGlaze)
+  const selectedPatternRef = useRef(selectedPattern)
   useEffect(() => {
-    selectedGlazeRef.current = selectedGlaze
-  }, [selectedGlaze])
+    selectedPatternRef.current = selectedPattern
+  }, [selectedPattern])
 
   // Three.js 内部对象引用
   const sceneRef = useRef<THREE.Scene | null>(null)
@@ -46,14 +133,15 @@ export function LandingPorcelain3D({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const vaseGroupRef = useRef<THREE.Group | null>(null)
   const vaseMeshRef = useRef<THREE.Mesh | null>(null)
+  const builderRef = useRef<PotteryGeometryBuilder>(new PotteryGeometryBuilder(56, 56, 14.2, 0.45))
   const animFrameRef = useRef<number | null>(null)
 
   // 纹理材质缓存
-  const texturesRef = useRef<Record<ShowcaseGlaze, THREE.CanvasTexture | null>>({
-    qing: null,
-    lang: null,
-    hua: null,
-    cha: null,
+  const texturesRef = useRef<Record<ShowcasePattern, THREE.CanvasTexture | null>>({
+    lotus: null,
+    dragon: null,
+    fish: null,
+    ice: null,
   })
 
   // 交互与缓动状态
@@ -62,32 +150,27 @@ export function LandingPorcelain3D({
   const rotVelocityRef = useRef(0.0055)
   const tiltRef = useRef(0.08)
 
-  // 1. 生成各款名釉高精度物理贴图
-  const getTexture = useCallback((glaze: ShowcaseGlaze): THREE.CanvasTexture => {
-    if (texturesRef.current[glaze]) {
-      return texturesRef.current[glaze]!
+  // 1. 生成各款名窑纹饰高精度贴图
+  const getTexture = useCallback((pattern: ShowcasePattern): THREE.CanvasTexture => {
+    const validPattern = SHOWCASE_PATTERNS[pattern] ? pattern : 'lotus'
+    if (texturesRef.current[validPattern]) {
+      return texturesRef.current[validPattern]!
     }
 
-    let canvas: HTMLCanvasElement
-    if (glaze === 'qing') {
-      canvas = document.createElement('canvas')
-      canvas.width = 1024
-      canvas.height = 1024
-      const ctx = canvas.getContext('2d')
-      if (ctx) renderQinghuaMotif(ctx, 1024, 1024, 'lotus' as MotifType)
-    } else if (glaze === 'lang') {
-      canvas = generateLangyaoCanvas(1024, 1024)
-    } else if (glaze === 'hua') {
-      canvas = generateHuayouCanvas(1024, 1024)
-    } else {
-      canvas = generateChayemoCanvas(1024, 1024)
+    const info = SHOWCASE_PATTERNS[validPattern]
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 1024
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      renderQinghuaMotif(ctx, 1024, 1024, info.motif)
     }
 
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.ClampToEdgeWrapping
     texture.needsUpdate = true
-    texturesRef.current[glaze] = texture
+    texturesRef.current[validPattern] = texture
     return texture
   }, [])
 
@@ -143,21 +226,21 @@ export function LandingPorcelain3D({
     vaseGroupRef.current = displayGroup
 
     // --- A. 景德镇官窑梅瓶几何体与 PBR 陶瓷材质 ---
-    const builder = new PotteryGeometryBuilder(56, 56, 14.2, 0.45)
+    const builder = builderRef.current
     builder.loadPreset('meiping')
-    // 调教极其典雅的梅瓶神韵比例：修长秀美、丰肩圆润、小巧唇口
-    builder.adjustParameters(1.05, 0.96, 1.06)
+    const initialInfo = SHOWCASE_PATTERNS[selectedPattern] || SHOWCASE_PATTERNS.lotus
+    builder.adjustParameters(initialInfo.heightScale, initialInfo.rimScale, initialInfo.bellyScale)
     const vaseGeometry = builder.buildGeometry()
     vaseGeometry.computeVertexNormals()
 
-    const qingTexture = getTexture('qing')
+    const initialTexture = getTexture(initialInfo.id)
     const vaseMaterial = new THREE.MeshPhysicalMaterial({
-      map: qingTexture,
+      map: initialTexture,
       color: 0xffffff,
-      roughness: 0.05,
-      metalness: 0.02,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.04,
+      roughness: initialInfo.roughness,
+      metalness: initialInfo.metalness,
+      clearcoat: initialInfo.clearcoat,
+      clearcoatRoughness: initialInfo.clearcoatRoughness,
       ior: 1.52,
       reflectivity: 0.85,
       side: THREE.DoubleSide,
@@ -235,7 +318,8 @@ export function LandingPorcelain3D({
         if (syncVaseRef?.current) {
           syncVaseRef.current.y = displayGroup.rotation.y
           syncVaseRef.current.tilt = displayGroup.rotation.x
-          syncVaseRef.current.glaze = selectedGlazeRef.current
+          syncVaseRef.current.pattern = selectedPatternRef.current
+          syncVaseRef.current.glaze = selectedPatternRef.current
         }
       }
 
@@ -266,36 +350,26 @@ export function LandingPorcelain3D({
     }
   }, [getTexture, syncVaseRef])
 
-  // 3. 响应釉色切换
+  // 3. 响应不同花纹款式切换（材质与 3D 几何比例同频演进）
   useEffect(() => {
-    if (!vaseMeshRef.current) return
+    if (!vaseMeshRef.current || !builderRef.current) return
+    const info = SHOWCASE_PATTERNS[selectedPattern] || SHOWCASE_PATTERNS.lotus
     const mat = vaseMeshRef.current.material as THREE.MeshPhysicalMaterial
-    const tex = getTexture(selectedGlaze)
+    const tex = getTexture(info.id)
 
     mat.map = tex
-    if (selectedGlaze === 'qing') {
-      mat.roughness = 0.05
-      mat.clearcoat = 1.0
-      mat.clearcoatRoughness = 0.04
-      mat.metalness = 0.02
-    } else if (selectedGlaze === 'lang') {
-      mat.roughness = 0.07
-      mat.clearcoat = 1.0
-      mat.clearcoatRoughness = 0.03
-      mat.metalness = 0.04
-    } else if (selectedGlaze === 'hua') {
-      mat.roughness = 0.09
-      mat.clearcoat = 0.95
-      mat.clearcoatRoughness = 0.06
-      mat.metalness = 0.03
-    } else {
-      mat.roughness = 0.52
-      mat.clearcoat = 0.2
-      mat.clearcoatRoughness = 0.3
-      mat.metalness = 0.12
-    }
+    mat.roughness = info.roughness
+    mat.clearcoat = info.clearcoat
+    mat.clearcoatRoughness = info.clearcoatRoughness
+    mat.metalness = info.metalness
     mat.needsUpdate = true
-  }, [selectedGlaze, getTexture])
+
+    // 动态调整款式 3D 几何外轮廓 (高、口、腹微调)
+    const builder = builderRef.current
+    builder.loadPreset('meiping')
+    builder.adjustParameters(info.heightScale, info.rimScale, info.bellyScale)
+    builder.updateGeometryPositions(vaseMeshRef.current.geometry)
+  }, [selectedPattern, getTexture])
 
   // 4. 鼠标 360° 拖拽赏鉴事件处理
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -326,12 +400,7 @@ export function LandingPorcelain3D({
     isDraggingRef.current = false
   }
 
-  const glazeNames: Record<ShowcaseGlaze, string> = {
-    qing: '青花缠枝莲',
-    lang: '郎窑红',
-    hua: '窑变花釉',
-    cha: '茶叶末',
-  }
+  const currentInfo = SHOWCASE_PATTERNS[selectedPattern] || SHOWCASE_PATTERNS.lotus
 
   return (
     <div
@@ -349,28 +418,30 @@ export function LandingPorcelain3D({
       {/* 顶部御窑铭牌 */}
       <div className="showcase-badge-top">
         <span className="seal-dot" />
-        <span className="badge-text">景德镇御窑 · 青花缠枝莲梅瓶</span>
-        <span className="badge-dynasty">明 永乐·宣德</span>
+        <span className="badge-text">{currentInfo.fullName}</span>
+        <span className="badge-dynasty">{currentInfo.dynasty}</span>
       </div>
 
-      {/* 底部互动信息与四大名釉快捷预览 */}
+      {/* 底部互动信息与四大经典纹样款式快捷预览 */}
       <div className="showcase-bottom-bar">
         <div className="showcase-glaze-pills">
-          {(['qing', 'lang', 'hua', 'cha'] as ShowcaseGlaze[]).map((g) => (
+          {(['lotus', 'dragon', 'fish', 'ice'] as ShowcasePattern[]).map((p) => (
             <button
-              key={g}
-              className={`glaze-mini-pill ${selectedGlaze === g ? 'active' : ''}`}
+              key={p}
+              className={`glaze-mini-pill ${selectedPattern === p ? 'active' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
-                setInternalGlaze(g)
-                onGlazeChange?.(g)
+                setInternalPattern(p)
+                onPatternChange?.(p)
+                onGlazeChange?.(p)
                 if (syncVaseRef?.current) {
-                  syncVaseRef.current.glaze = g
+                  syncVaseRef.current.pattern = p
+                  syncVaseRef.current.glaze = p
                 }
               }}
             >
-              <span className={`pill-color-dot ${g}`} />
-              {glazeNames[g]}
+              <span className={`pill-color-dot ${p}`} />
+              {SHOWCASE_PATTERNS[p].name}
             </button>
           ))}
         </div>
@@ -384,7 +455,7 @@ export function LandingPorcelain3D({
               className="showcase-remake-btn"
               onClick={(e) => {
                 e.stopPropagation()
-                onEnterWorkshop()
+                onEnterWorkshop(selectedPattern)
               }}
             >
               在工坊制作同款 →
