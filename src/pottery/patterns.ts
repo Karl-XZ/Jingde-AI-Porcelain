@@ -4,7 +4,7 @@
  * 以及国宝级名釉：郎窑红（脱口出筋、牛毛细片）、窑变花釉（紫蓝流淌）、茶叶末结晶釉（黄金微晶斑）
  */
 
-export type MotifType = 'lotus' | 'dragon' | 'ice' | 'banana' | 'blank'
+export type MotifType = 'lotus' | 'dragon' | 'ice' | 'banana' | 'blank' | 'fish'
 
 // 7 款景德镇经典矿物颜料
 export const PALETTE_COLORS = [
@@ -133,6 +133,20 @@ export function renderQinghuaMotif(
     for (let i = 0; i < leafCount; i++) {
       const bx = i * leafW
       drawBananaLeaf(ctx, bx, height * 0.68, leafW, height * 0.38, deepCobalt, cobaltBlue, lightCobalt)
+    }
+  } else if (motif === 'fish') {
+    // 明宣德/嘉靖青花鱼藻清漪图 (Fish & Aquatic Plants / Pond Scroll)
+    const fishCount = 5
+    const stepX = width / fishCount
+    for (let i = 0; i < fishCount; i++) {
+      const cx = i * stepX + stepX * 0.5
+      const cy = height * 0.52 + (i % 2 === 0 ? -28 : 28)
+      drawFishMotif(ctx, cx, cy, i % 2 === 0 ? 0.15 : -0.15, deepCobalt, cobaltBlue, lightCobalt)
+    }
+    // 水草荇藻与浮萍
+    for (let i = 0; i < 10; i++) {
+      const wx = (i * width) / 10 + 35
+      drawWaterWeed(ctx, wx, height * 0.68, deepCobalt, lightCobalt)
     }
   }
 
@@ -470,6 +484,107 @@ function drawBananaLeaf(
     ctx.lineWidth = 1.6
     ctx.stroke()
   }
+
+  ctx.restore()
+}
+
+/**
+ * 绘制明代青花鱼藻纹 (鳜鱼/鲤鱼游弋)
+ */
+function drawFishMotif(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  angle: number,
+  strokeColor: string,
+  fillColor: string,
+  lightColor: string
+) {
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate(angle)
+
+  // 鱼身流线型
+  ctx.beginPath()
+  ctx.moveTo(-50, 0)
+  ctx.bezierCurveTo(-25, -28, 25, -25, 45, 0)
+  ctx.bezierCurveTo(25, 25, -25, 28, -50, 0)
+  ctx.fillStyle = lightColor
+  ctx.fill()
+  ctx.strokeStyle = strokeColor
+  ctx.lineWidth = 3
+  ctx.stroke()
+
+  // 鱼鳞网状点缀
+  ctx.strokeStyle = fillColor
+  ctx.lineWidth = 1.5
+  for (let x = -20; x <= 20; x += 10) {
+    ctx.beginPath()
+    ctx.arc(x, 0, 8, -Math.PI * 0.4, Math.PI * 0.4)
+    ctx.stroke()
+  }
+
+  // 鱼尾 (分叉摆动尾鳍)
+  ctx.beginPath()
+  ctx.moveTo(-45, 0)
+  ctx.bezierCurveTo(-65, -22, -80, -25, -85, -15)
+  ctx.bezierCurveTo(-75, -5, -60, 0, -75, 5)
+  ctx.bezierCurveTo(-80, 15, -65, 22, -45, 0)
+  ctx.fillStyle = fillColor
+  ctx.fill()
+  ctx.strokeStyle = strokeColor
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  // 背鳍与腹鳍
+  ctx.beginPath()
+  ctx.moveTo(-5, -22)
+  ctx.quadraticCurveTo(10, -38, 25, -18)
+  ctx.strokeStyle = strokeColor
+  ctx.lineWidth = 2.5
+  ctx.stroke()
+
+  // 鱼眼
+  ctx.fillStyle = strokeColor
+  ctx.beginPath()
+  ctx.arc(32, -4, 3.5, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/**
+ * 绘制水草荇藻
+ */
+function drawWaterWeed(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  strokeColor: string,
+  fillColor: string
+) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.strokeStyle = strokeColor
+  ctx.lineWidth = 2.5
+
+  ctx.beginPath()
+  ctx.moveTo(0, 0)
+  ctx.bezierCurveTo(-15, -30, 20, -60, -5, -90)
+  ctx.bezierCurveTo(-20, -110, 10, -130, 0, -150)
+  ctx.stroke()
+
+  // 藻叶
+  ctx.fillStyle = fillColor
+  ctx.beginPath()
+  ctx.ellipse(12, -60, 14, 6, Math.PI / 4, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.ellipse(-14, -100, 12, 5, -Math.PI / 4, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.stroke()
 
   ctx.restore()
 }

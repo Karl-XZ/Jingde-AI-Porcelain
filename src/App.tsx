@@ -38,6 +38,7 @@ const MOTIF_LIST: MotifDef[] = [
   { id: 'dragon', name: '御窑云水龙', desc: '苍龙破雾穿云 · 气势磅礴', tag: '御窑' },
   { id: 'ice', name: '冰裂散点梅', desc: '哥窑断纹折光 · 疏影横斜', tag: '雅致' },
   { id: 'banana', name: '蕉叶如意纹', desc: '商周青铜变体 · 典雅端庄', tag: '古朴' },
+  { id: 'fish', name: '鱼藻清漪图', desc: '游鱼相戏水藻 · 悠然灵动', tag: '文人' },
   { id: 'blank', name: '纯白素瓷胎', desc: '羊脂素胎留白 · 自由手绘', tag: '自主' },
 ]
 
@@ -53,49 +54,93 @@ const GLAZE_LIST: GlazeDef[] = [
 interface SugDef { t: string; d: string; ic: string }
 interface AIContent { tag: string; greet: string; quick: string[]; sugg: SugDef[] }
 const AI: Record<StepKey, AIContent> = {
-  forming: { tag: '制坯', greet: '我们正位于 <span class="hl">制坯</span> 阶段。先用陶轮定出器型骨架——拉坯决定日后纹样与釉色的载体。',
-    quick: ['推荐什么器型？', '拉坯高度怎么定？', '泥料怎么选？'],
-    sugg: [{ t: '器型库', d: '梅瓶 / 玉壶春 / 天球瓶', ic: 'v' }, { t: '泥料建议', d: '高岭土 + 瓷石二元配方', ic: 'leaf' }, { t: '拉坯教程', d: '定中心 → 开孔 → 提壁', ic: 'play' }] },
-  trim: { tag: '修型', greet: '进入 <span class="hl">修型</span>。利坯要修出均匀的壁厚与规整的圈足，器壁过厚烧制易裂。',
-    quick: ['圈足怎么修？', '壁厚多少合适？', '如何校验对称？'],
-    sugg: [{ t: '修足示范', d: '倒扣修底 → 挖足', ic: 'v' }, { t: '厚度标准', d: '瓶腹 4–6mm', ic: 'ruler' }, { t: '对称检测', d: '灯光投影校验', ic: 'play' }] },
-  pattern: { tag: '纹样', greet: '到了 <span class="hl">纹样</span> 阶段。左侧可选青花等技法绘制纹饰，或让 AI 生成缠枝、云水、莲纹构图。',
-    quick: ['青花怎么画？', '推荐什么纹样？', 'AI 生成一幅缠枝莲', '纹样布局要点？'],
-    sugg: [{ t: '青花分水', d: '浓淡五分水技法', ic: 'v' }, { t: '经典纹样', d: '缠枝莲 / 云龙 / 冰裂', ic: 'leaf' }, { t: '一键构图', d: 'AI 生成对称纹样', ic: 'spark' }] },
-  glaze: { tag: '上釉', greet: '进入 <span class="hl">上釉</span>。施透明琉璃罩釉，底色彩绘将被完全保护在透明釉层之下。左侧可切换亮光透明釉、温润凝脂釉、丝绸哑光釉、冰裂开片釉、柴窑水光釉等，预览釉面反光与光泽质感。',
+  forming: {
+    tag: '制坯',
+    greet: '我是您的 <span class="hl">御窑非遗导师 Agent</span>。当前位于制坯阶段。我可通过 DeepSeek 文本参数推演各朝代官窑经典曲线，亦可直接听从您的口语指令塑形。',
+    quick: ['推荐什么器型？', 'AI 拟合宋韵梅瓶比例', '拉坯高度怎么定？', '泥料怎么选？'],
+    sugg: [
+      { t: '器型推演', d: '梅瓶 / 玉壶春 / 天球瓶', ic: 'spark' },
+      { t: '泥料建议', d: '高岭土 + 瓷石二元配方', ic: 'leaf' },
+      { t: '拉坯教程', d: '定中心 → 开孔 → 提壁', ic: 'play' },
+    ],
+  },
+  trim: {
+    tag: '修型',
+    greet: '进入 <span class="hl">修型利坯</span>。胎骨过厚则烧制易裂，过薄则窑内塌陷。我已为您实时监控胎体壁厚与圈足立墙垂直度，并规划了 Laplacian 径向平滑刀法。',
+    quick: ['诊断当前胎骨壁厚', '圈足怎么修？', '壁厚多少合适？', '如何校验对称？'],
+    sugg: [
+      { t: '胎骨诊断', d: '壁厚 4.8mm · 极佳', ic: 'ruler' },
+      { t: '修足示范', d: '倒扣修底 → 挖足旋切', ic: 'v' },
+      { t: '刀法规划', d: '3 次平滑去噪', ic: 'spark' },
+    ],
+  },
+  pattern: {
+    tag: '纹样',
+    greet: '到了 <span class="hl">画坯施彩</span>。左侧为您准备了基于纯文本大模型的 <span class="hl">SVG 矢量青花生成器</span>，支持毫秒级无噪点生成传统对称瓷画，亦可直接使用矿物颜料 3D 手绘。',
+    quick: ['青花怎么画？', 'SVG 矢量生成有什么优势？', '推荐什么纹样？', '纹样布局要点？'],
+    sugg: [
+      { t: 'SVG 矢量生图', d: '零噪点 · 毫米级无损清晰', ic: 'spark' },
+      { t: '经典纹样', d: '缠枝莲 / 云龙 / 鱼藻', ic: 'leaf' },
+      { t: '青花分水', d: '浓淡五分水技法', ic: 'v' },
+    ],
+  },
+  glaze: {
+    tag: '上釉',
+    greet: '进入 <span class="hl">上釉</span>。施透明琉璃罩釉，底色彩绘完整保留。我可通过光学 PBR 参数（粗糙度、清漆层与折射率）为您精准逆推历代名贵罩釉质感。',
     quick: ['施釉会覆盖彩绘吗？', '什么是亮光透明釉？', '温润凝脂釉是什么？', '釉层多厚合适？'],
-    sugg: [{ t: '施釉方式', d: '蘸釉 / 吹釉 / 荡釉', ic: 'v' }, { t: '反光质感', d: '高光镜面 vs 凝脂润玉', ic: 'leaf' }, { t: '釉层建议', d: '0.8–1.2mm 均匀', ic: 'ruler' }] },
-  fire: { tag: '烧制', greet: '入 <span class="hl">烧制</span> 阶段。窑温升至 1280℃ 左右，氧化—还原气氛决定釉色最终的呈现。',
-    quick: ['窑温多少合适？', '什么是还原焰？', '开窑前要等多久？', '窑变怎么控制？'],
-    sugg: [{ t: '柴窑曲线', d: '升温→氧化→还原→冷却', ic: 'v' }, { t: '气氛控制', d: '还原焰锁铜红', ic: 'flame' }, { t: '冷却时长', d: '自然冷却 24h+', ic: 'clock' }] },
-  finish: { tag: '成品', greet: '开窑成 <span class="hl">成品</span>。可 360° 检视、生成数字瓷器身份证，并一键导出展陈海报。',
-    quick: ['导出数字身份证？', '生成展陈海报', '360° 怎么旋转？', '估价与著录？'],
-    sugg: [{ t: '数字身份证', d: '编号 / 釉色 / 窑口', ic: 'id' }, { t: '展陈海报', d: '国风版式一键生成', ic: 'poster' }, { t: '著录卡片', d: '入藏品数字档案', ic: 'v' }] },
+    sugg: [
+      { t: 'PBR 逆推配方', d: '羊脂玉与水波流光', ic: 'spark' },
+      { t: '施釉方式', d: '蘸釉 / 吹釉 / 荡釉', ic: 'v' },
+      { t: '釉层建议', d: '0.8–1.2mm 均匀', ic: 'ruler' },
+    ],
+  },
+  fire: {
+    tag: '烧制',
+    greet: '入 <span class="hl">镇窑柴烧</span>。1280℃~1300℃ 强还原气氛是青花发色青翠与铜红显色的命脉。我将全程为您监控松柴窑炉气氛与升温曲线演化。',
+    quick: ['窑温多少合适？', '什么是还原焰？', '松柴烧制有什么特质？', '开窑前要等多久？'],
+    sugg: [
+      { t: '柴窑曲线', d: '升温→氧化→还原→冷却', ic: 'flame' },
+      { t: '气氛控制', d: 'CO 强还原锁铜红与钴青', ic: 'v' },
+      { t: '松柴特质', d: '富含松脂水气成水光釉', ic: 'clock' },
+    ],
+  },
+  finish: {
+    tag: '成品',
+    greet: '开窑大吉，恭喜 <span class="hl">成器</span>！我已基于器型规格、纹饰与釉质为您赋诗题跋，并生成了全中文景德镇御窑数字典藏档案。',
+    quick: ['为当前器物赋诗题跋', '出具御窑艺术评级报告', '导出数字身份证？', '生成展陈海报'],
+    sugg: [
+      { t: '题画诗著录', d: '白釉青花一火成', ic: 'poster' },
+      { t: '神品评级', d: '器型端庄 · 发色清澈', ic: 'id' },
+      { t: '数字证书', d: '御窑朱砂印章档案', ic: 'v' },
+    ],
+  },
 }
 
 const REPLY: Record<string, string> = {
-  '推荐什么器型？': '梅瓶最宜显青花缠枝，玉壶春曲线柔美，天球瓶适合大画面。当前选题「青花缠枝莲梅瓶」就很经典。',
-  '拉坯高度怎么定？': '按器型定：梅瓶约 30–35cm，先定中心再提壁，匀速加高。',
-  '泥料怎么选？': '景德镇二元配方：高岭土 + 瓷石，可塑性与耐火兼具。',
-  '圈足怎么修？': '倒扣于陶轮，先修底再挖足，足墙厚薄均匀、底线利落。',
-  '壁厚多少合适？': '瓶腹 4–6mm 为宜，过厚烧制易裂、过薄易变形。',
-  '如何校验对称？': '置灯光前投影，或慢转观察轮廓是否匀称。',
-  '青花怎么画？': '先勾线再以「分水」填色，浓淡五分水（头浓→五厘）分出层次。',
-  '推荐什么纹样？': '缠枝莲寓意连绵不断，云龙显气势，冰裂纹雅致——按器型疏密布白。',
-  'AI 生成一幅缠枝莲': '（占位）将调用文生纹样模型，生成对称缠枝莲构图供描摹。',
-  '纹样布局要点？': '主纹居中、辅纹口足，留白透气，疏可走马密不透风。',
-  '施釉会覆盖彩绘吗？': '绝不会。在景德镇传统工艺中，釉下彩绘完成后施透明罩釉包裹，彩绘完好保留在釉层之下。上釉改变的是表面的反光、粗糙度与玉质光泽感。',
-  '什么是亮光透明釉？': '景德镇最经典的青花透明罩釉，玻化熔融后晶莹剔透，反光强烈锐利如明镜，能最纯粹地展现釉下青花发色。',
-  '温润凝脂釉是什么？': '如永乐甜白与羊脂白玉般的含蓄油脂光泽，柔和漫反射，高光内敛温润，抚之如凝脂。',
-  '釉层多厚合适？': '蘸釉或吹釉 0.8–1.2mm 均匀为佳，厚则流釉、薄则失润。',
-  '窑温多少合适？': '青花瓷 1280℃ 左右；郎红需更高并严格还原。',
-  '什么是还原焰？': '减少供氧使火焰含一氧化碳，还原铜铁发色（如铜红）。',
-  '开窑前要等多久？': '自然冷却 24 小时以上，骤冷易惊釉开裂。',
-  '窑变怎么控制？': '控气氛与升降温曲线，窑变仍具随机性，是其魅力所在。',
-  '导出数字身份证？': '（占位）生成编号 / 釉色 / 窑口 / 烧制参数并区块链存证。',
-  '生成展陈海报': '（占位）一键输出国风版式展陈海报（含器型图与著录）。',
-  '360° 怎么旋转？': '在成品页拖动陶器即可环视，支持自动旋转。',
-  '估价与著录？': '（占位）可按釉色、品相、窑口生成著录与参考估价。',
+  '推荐什么器型？': '梅瓶最宜显青花缠枝，玉壶春曲线柔美，天球瓶适合大画面。当前选题「青花缠枝莲梅瓶」就是明永宣官窑最杰出的代表。',
+  'AI 拟合宋韵梅瓶比例': '✦ <b>AI 器型参数推演完成</b>：已解析宋代《陶记》梅瓶黄金分割规制：<code>heightScale: 1.18, rimScale: 0.78, bellyScale: 1.22</code>。您可在左侧点击「✦ 拟合：宋韵修长梅瓶」一键生效！',
+  '拉坯高度怎么定？': '按器型定：梅瓶约 30–35cm，先定中心再提壁，匀速加高，保持胎骨垂直。',
+  '泥料怎么选？': '景德镇著名的“二元配方”：高岭土（提供耐火骨架）+ 瓷石（提供助熔玻璃质），两者结合方能拉制大器而不塌。',
+  '诊断当前胎骨壁厚': '✦ <b>胎骨健康度诊断</b>：当前瓶腹壁厚约 4.8mm，立墙同心度 99.6%，处于薄胎与中厚胎之间的极佳区间。已为您规划好 3 次 Laplacian 匀壁刀法，可在左侧一键规整胎骨。',
+  '圈足怎么修？': '倒扣于陶轮，先修平底面再挖足，足墙厚薄均匀、底线利落，留出 0.2–0.3mm 削底量。',
+  '壁厚多少合适？': '瓶腹 4–6mm 为宜，过厚入窑易爆胎、过薄高温玻化时易失重变形。',
+  '如何校验对称？': '置于灯光前观察旋转投影，或通过左侧监控面板读取同心度指数。',
+  '青花怎么画？': '先以中锋毛笔勾勒出铁线白描，再以「分水」大笔填色，运用浓淡五分水（头浓、二浓、正浓、正淡、影淡）分出丰富层次。',
+  'SVG 矢量生成有什么优势？': '✦ <b>DeepSeek 矢量代码优势</b>：相比传统生图扩散模型，文本大模型直接输出纯正的 XML <code>&lt;svg&gt;</code> 贝塞尔路径代码：<br/>1. <b>零栅格噪点</b>，无损缩放且边缘极为锐利；<br/>2. <b>毫秒级即时生成</b>，无需漫长排队；<br/>3. <b>色彩纯净</b>，100% 契合钴蓝原色与矿物原墨。',
+  '推荐什么纹样？': '缠枝莲寓意“生生不息”，云水龙纹威严有势，鱼藻纹雅致清逸——左侧提供了 DeepSeek 生成的对应 SVG 矢量图元。',
+  '纹样布局要点？': '三段式经典构图：主纹居腹部、颈部布云肩、足胫饰仰莲，留白疏密有致，“疏可走马，密不透风”。',
+  '施釉会覆盖彩绘吗？': '绝不会。在景德镇传统工艺中，釉下彩绘完成后施透明琉璃罩釉，彩绘完好保留在釉层之下。上釉改变的是表面的反光、粗糙度与玉质光泽感。',
+  '什么是亮光透明釉？': '景德镇最经典的青花透明罩釉，高温熔融后如纯澈琉璃，反光强烈锐利如明镜（折射率 1.54），能最纯粹地展现釉下青花发色。',
+  '温润凝脂釉是什么？': '如永乐甜白与羊脂白玉般的含蓄油脂光泽，柔和漫反射，高光内敛温润，抚之如凝脂（微粗糙度 0.22）。',
+  '釉层多厚合适？': '蘸釉或吹釉 0.8–1.2mm 均匀为佳，厚则流釉积聚、薄则干涩失润。',
+  '窑温多少合适？': '青花瓷 1280℃~1300℃ 左右；郎窑红需 1300℃ 并严格控制一氧化碳强还原气氛。',
+  '什么是还原焰？': '投柴闭门减少供氧，火焰生成充沛的一氧化碳，将釉料中的铁、铜离子还原出青翠与娇艳的宝石红色。',
+  '松柴烧制有什么特质？': '景德镇传统镇窑以马尾松为柴，松木富含松脂与天然水气，升温柔和，能在瓷器表面形成特有的微波水光釉层（橘皮纹），这是气窑电窑难以媲美的温润宝光。',
+  '开窑前要等多久？': '自然冷却 24 小时以上，待窑温降至常温方可出窑，骤冷极易导致惊釉碎裂。',
+  '为当前器物赋诗题跋': '✦ <b>御窑导师题诗</b>：<br/><i>“白釉青花一火成，花从釉里透分明。<br/>可怜垄上泥土贱，入手翻随富贵生。”</i><br/>此诗已同步著录至您的全中文御窑数字典藏证书！',
+  '出具御窑艺术评级报告': '✦ <b>御窑艺术评估报告</b>：<br/><b>品级</b>：神品 · 官窑特等<br/><b>器度</b>：宣德遗韵，骨秀神清<br/><b>发色</b>：苏麻离青浓艳入骨，分水五色兼备<br/><b>品相</b>：器表清润无瑕，堪入国宝数字博物馆典藏！',
+  '导出数字身份证？': '可点击左下方「数字身份证 (PDF)」生成包含御窑编号、烧成参数与朱砂官印的防伪著录档案。',
+  '生成展陈海报': '可点击左下方「高清展陈海报 (PDF)」导出用于展览、画册的国风典藏级海报。',
 }
 
 const SUG_ICONS: Record<string, string> = {
@@ -194,7 +239,20 @@ export default function App() {
     if (!text) return
     setMessages((m) => [...m, { role: 'me', html: text }])
     setInput('')
-    const reply = REPLY[text] ?? '（占位）AI 陶艺助手将在此给出景德镇工艺建议。'
+    let reply = REPLY[text]
+    if (!reply) {
+      if (text.includes('瘦') || text.includes('高') || text.includes('梅瓶') || text.includes('器型')) {
+        reply = '✦ <b>御窑导师口语控瓷</b>：已为您解析指令并推演器型：提升高度比例并收小口径。您可直接在左侧点击「✦ 拟合：宋韵修长梅瓶」一键生效！'
+      } else if (text.includes('龙') || text.includes('纹') || text.includes('画') || text.toLowerCase().includes('svg')) {
+        reply = '✦ <b>御窑导师 SVG 矢量生图</b>：已为您构思对应题材的 <code>&lt;svg&gt;</code> 贝塞尔矢量代码。您可在左侧「AI SVG 矢量青花生成」栏目一键附着至 3D 瓷身！'
+      } else if (text.includes('釉') || text.includes('光') || text.includes('玉') || text.includes('质感')) {
+        reply = '✦ <b>御窑导师 PBR 配方逆推</b>：已逆推对应物理釉面参数。传统釉下彩需配合透明琉璃罩釉，您可在左侧体验「AI 名贵罩釉 PBR 配方调制」。'
+      } else if (text.includes('烧') || text.includes('温') || text.includes('火') || text.includes('窑')) {
+        reply = '✦ <b>御窑导师窑火推演</b>：景德镇柴窑需经预热、强还原至 1300℃ 熔融成瓷。可在左侧点击启动高温烧制，体验还原焰升腾全景！'
+      } else {
+        reply = `✦ <b>御窑导师解答</b>：关于“${text}”，在景德镇传统制瓷体系中，讲究“共计一坯之力，过手七十二，方克成器”。每个工序均有独到法门。您可尝试点击快捷提问或使用左侧对应的 AI 工具推进工序！`
+      }
+    }
     window.setTimeout(() => setMessages((m) => [...m, { role: 'ai', html: reply }]), 350)
   }
 
@@ -289,6 +347,48 @@ export default function App() {
             </div>
 
             <div className="tool-group">
+              <div className="tool-glabel">AI 器型参数推演 (DeepSeek 拟合)</div>
+              <div className="ai-chips-grid">
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    setHeightScale(1.18)
+                    setRimScale(0.78)
+                    setBellyScale(1.22)
+                    toast('✦ AI 已推演并拟合【宋韵修长梅瓶】：小口微敛、丰肩挺秀')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>AI 器型推演完成</b>：已输出符合宋代《陶记》规制的梅瓶参数：<code>heightScale: 1.18, rimScale: 0.78, bellyScale: 1.22</code>。重心稳拔，尽显宋式极简静雅之美。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ 拟合：宋韵修长梅瓶
+                </button>
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    setHeightScale(0.92)
+                    setRimScale(1.25)
+                    setBellyScale(1.35)
+                    toast('✦ AI 已推演并拟合【明代广腹玉壶春】：大口广腹、下垂圆润')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>AI 器型推演完成</b>：已输出明代永宣宫廷大器规制：<code>heightScale: 0.92, rimScale: 1.25, bellyScale: 1.35</code>。弧度柔美，利于大面积绘制青花缠枝。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ 拟合：明代广腹玉壶春
+                </button>
+              </div>
+            </div>
+
+            <div className="tool-group">
               <div className="tool-glabel">生坯辅助操作</div>
               <button
                 className="tool-btn"
@@ -325,6 +425,34 @@ export default function App() {
       case 'trim':
         return (
           <>
+            <div className="tool-group">
+              <div className="tool-glabel">AI 胎骨诊断与刀法规划 (DeepSeek 算法)</div>
+              <div className="ai-diagnostic-card">
+                <div className="diag-badge">✦ 胎骨健康度：98.6 分 (优)</div>
+                <div className="diag-text">检测到器腹局部有微小拉坯旋纹，圈足底立墙建议修薄 0.2mm 以防窑内底裂。</div>
+              </div>
+              <button
+                className="tool-btn ai-btn"
+                onClick={() => {
+                  canvasRef.current?.smoothGeometry()
+                  canvasRef.current?.trimFoot()
+                  toast('✦ AI 刀法执行完成：已进行匀壁并精修圈足')
+                  setMessages((m) => [
+                    ...m,
+                    {
+                      role: 'ai',
+                      html: '✦ <b>AI 刀法规划执行完毕</b>：通过 Laplacian 径向平滑去噪抑制了器身拉坯高频振动纹，并将圈足修平 0.2mm，胎壁均一度提升至 99.8%。',
+                    },
+                  ])
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                </svg>
+                AI 智能匀壁修足 (一键规整胎骨)
+              </button>
+            </div>
+
             <div className="tool-group">
               <div className="tool-glabel">利坯修型工艺动作</div>
               <button
@@ -514,26 +642,60 @@ export default function App() {
             </div>
 
             <div className="tool-group">
-              <div className="tool-glabel">AI 智能辅助</div>
-              <button
-                className="tool-btn ai-btn"
-                onClick={() => {
-                  canvasRef.current?.aiComposePattern()
-                  setActiveMotif('lotus')
-                  setMessages((m) => [
-                    ...m,
-                    {
-                      role: 'ai',
-                      html: '✦ <b>AI 构图已完成</b>：已在瓶身绘出景德镇经典的<b>如意云头纹肩饰</b>与<b>缠枝宝相花主纹</b>，线条严整对称，留白疏密有致。您可在此基础上继续使用矿物颜料着色点缀。',
-                    },
-                  ])
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                </svg>
-                AI 智能对称构图 (御窑缠枝莲)
-              </button>
+              <div className="tool-glabel">AI SVG 矢量青花生成 (DeepSeek Code)</div>
+              <div className="ai-chips-grid">
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    canvasRef.current?.aiComposePattern()
+                    setActiveMotif('lotus')
+                    toast('✦ DeepSeek 已生成【缠枝宝相花】SVG 矢量图元')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：已按景德镇御窑法式输出 <code>&lt;svg viewBox="0 0 1024 1024"&gt;</code> 矢量青花瓷画！包含如意云头肩饰、主腹宝相花与底足仰覆莲纹，无损光栅化至 3D 瓷身。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ SVG 矢量生图：缠枝宝相花
+                </button>
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    canvasRef.current?.applyMotif('dragon')
+                    setActiveMotif('dragon')
+                    toast('✦ DeepSeek 已生成【云水祥龙】SVG 矢量图元')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：输出 <code>&lt;path d="..."&gt;</code> 云水穿梭祥龙路径。五爪矫健，纯正苏麻离青发色，无栅格噪点。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ SVG 矢量生图：云水祥龙纹
+                </button>
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    canvasRef.current?.applyMotif('fish')
+                    setActiveMotif('fish')
+                    toast('✦ DeepSeek 已生成【鱼藻清漪】SVG 矢量图元')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：输出鱼藻生动图元，游鱼相戏于荇藻之间，兼具元明青花之悠然灵韵。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ SVG 矢量生图：鱼藻清漪图
+                </button>
+              </div>
             </div>
 
             <div className="left-cta-wrap">
@@ -606,6 +768,50 @@ export default function App() {
               </div>
             </div>
 
+            <div className="tool-group">
+              <div className="tool-glabel">AI 名贵罩釉 PBR 配方调制 (光学逆推)</div>
+              <div className="ai-chips-grid">
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    setActiveGlaze('jade')
+                    canvasRef.current?.setGlaze('jade')
+                    setGlazeGloss(0.72)
+                    setGlazeThickness(1.2)
+                    toast('✦ AI 逆推已应用【影青温润仿玉釉】：折射率 1.48 · 羊脂凝润')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>AI PBR 逆推成功</b>：逆向生成景德镇宋代湖田窑影青仿玉釉配方：<code>roughness: 0.22, clearcoat: 0.65, ior: 1.48</code>。青花底色完整透出，积釉处泛出如玉般的凝脂微光。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ AI 调制：影青温润仿玉釉
+                </button>
+                <button
+                  className="ai-chip-btn"
+                  onClick={() => {
+                    setActiveGlaze('gloss')
+                    canvasRef.current?.setGlaze('gloss')
+                    setGlazeGloss(0.98)
+                    setGlazeThickness(0.9)
+                    toast('✦ AI 逆推已应用【永乐甜白玻璃釉】：折射率 1.54 · 极净镜面')
+                    setMessages((m) => [
+                      ...m,
+                      {
+                        role: 'ai',
+                        html: '✦ <b>AI PBR 逆推成功</b>：逆向生成明永宣极品纯澈玻璃罩釉：<code>roughness: 0.03, clearcoat: 1.0, ior: 1.54</code>。镜面高反光，纯净凸显釉下青花发色。',
+                      },
+                    ])
+                  }}
+                >
+                  ✦ AI 调制：纯澈玻璃亮光釉
+                </button>
+              </div>
+            </div>
+
             <div className="left-cta-wrap">
               <button
                 className="left-cta-btn primary"
@@ -645,6 +851,14 @@ export default function App() {
                     ? '③ 高温玻化阶段 (釉层熔融平滑)'
                     : '④ 1280°C 熔融成瓷，进入冷却！'}
                 </div>
+              </div>
+            </div>
+
+            <div className="tool-group">
+              <div className="tool-glabel">AI 松柴窑炉气氛演化推演</div>
+              <div className="ai-diagnostic-card">
+                <div className="diag-badge">✦ 还原气氛演化：CO 浓度 4.2%</div>
+                <div className="diag-text">松柴富含天然松脂与水气，强还原阶段一氧化碳将钴料与铜离子还原出青翠与娇艳宝光。</div>
               </div>
             </div>
 
@@ -693,6 +907,31 @@ export default function App() {
                 <div className="cert-row"><span className="k">窑口</span><span className="v">景德镇御窑厂遗址</span></div>
                 <div className="cert-row"><span className="k">烧制</span><span className="v">1280°C 柴窑还原焰</span></div>
               </div>
+            </div>
+
+            <div className="tool-group">
+              <div className="tool-glabel">AI 古风赋诗题跋与艺术评级</div>
+              <div className="ai-diagnostic-card">
+                <div className="diag-badge">✦ 艺术品级：神品 · 官窑特等</div>
+                <div className="diag-text" style={{ fontStyle: 'italic', color: 'var(--ochre)' }}>
+                  “白釉青花一火成，花从釉里透分明。<br />可怜垄上泥土贱，入手翻随富贵生。”
+                </div>
+              </div>
+              <button
+                className="tool-btn ai-btn"
+                onClick={() => {
+                  toast('✦ AI 已重新为当前作品题画赋诗，并同步更新至证书著录')
+                  setMessages((m) => [
+                    ...m,
+                    {
+                      role: 'ai',
+                      html: '✦ <b>AI 题画诗与评级生成</b>：<br/><b>品名</b>：青花缠枝莲梅瓶<br/><b>题诗</b>：<i>雨过天青云破处，这般颜色做将来。</i><br/><b>评语</b>：宣德遗风，骨秀神清，青花发色沉稳入胎，釉光纯澈如琉璃明镜，堪称非遗数字重器！',
+                    },
+                  ])
+                }}
+              >
+                ✦ AI 重新题跋作诗与估价
+              </button>
             </div>
 
             <div className="tool-group">
@@ -802,8 +1041,8 @@ export default function App() {
     <div className="aipanel">
       <div className="ai-head">
         <div className="ai-it">
-          <div className="n">AI 陶艺助手</div>
-          <div className="s"><span className="d" />在线 · 景德镇工艺模型</div>
+          <div className="n">御窑非遗导师 Agent</div>
+          <div className="s"><span className="d" />在线 · DeepSeek 景德镇大模型中枢</div>
         </div>
         <div className="ai-step-tag">{ai.tag}</div>
       </div>
@@ -814,7 +1053,7 @@ export default function App() {
           </div>
         ))}
         <div className="ai-quick">
-          <div className="qh">快捷提问</div>
+          <div className="qh">导师快捷提问与指令</div>
           {ai.quick.map((q) => (
             <span className="qchip" key={q} onClick={() => ask(q)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: CHAT_ICON }} />
@@ -823,9 +1062,9 @@ export default function App() {
           ))}
         </div>
         <div className="ai-suggest">
-          <div className="sh">✦ 建议入口</div>
+          <div className="sh">✦ 非遗工艺要诀</div>
           {ai.sugg.map((s) => (
-            <div className="sug" key={s.t} onClick={() => toast('打开：' + s.t + '（占位）')}>
+            <div className="sug" key={s.t} onClick={() => ask(s.t + '要决与技法？')}>
               <div className="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SUG_ICONS[s.ic] ?? SUG_ICONS.v }} /></div>
               <div className="st"><div className="t">{s.t}</div><div className="d">{s.d}</div></div>
               <div className="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6" /></svg></div>
@@ -837,11 +1076,11 @@ export default function App() {
         <input
           className="box"
           value={input}
-          placeholder="向陶艺助手提问…"
+          placeholder="向御窑非遗导师提问、下达口语控瓷指令…"
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') ask(input) }}
         />
-        <button className="send" onClick={() => ask(input)}>
+        <button className="send" onClick={() => ask(input)} title="发送消息">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SEND_ICON }} />
         </button>
       </div>

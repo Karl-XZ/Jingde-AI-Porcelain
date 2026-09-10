@@ -137,6 +137,65 @@
 }
 .tool-btn.ai-btn:hover { filter: brightness(1.15); box-shadow: 0 0 12px rgba(201, 162, 79, 0.3); }
 
+/* AI 智能操作芯片组与诊断卡片 */
+.ai-chips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.ai-chip-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(47, 106, 169, 0.22), rgba(201, 162, 79, 0.12));
+  border: 1px solid rgba(201, 162, 79, 0.32);
+  color: var(--ivory);
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  transition: all 0.16s ease;
+}
+
+.ai-chip-btn:hover {
+  background: linear-gradient(135deg, rgba(47, 106, 169, 0.42), rgba(201, 162, 79, 0.26));
+  border-color: var(--gold-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.ai-diagnostic-card {
+  background: rgba(14, 12, 10, 0.65);
+  border: 1px solid rgba(201, 162, 79, 0.24);
+  border-radius: 9px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.diag-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--gold-light);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.diag-text {
+  font-size: 0.7rem;
+  color: rgba(243, 236, 220, 0.75);
+  line-height: 1.5;
+}
+
 /* 纹样列表 (STEP 03) */
 .motif-list { display: flex; flex-direction: column; gap: 6px; }
 .motif-tag {
