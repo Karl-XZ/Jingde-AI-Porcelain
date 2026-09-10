@@ -355,6 +355,9 @@ export default function App() {
       setHeightScale(res.heightScale)
       setRimScale(res.rimScale)
       setBellyScale(res.bellyScale)
+      if (res.points && res.points.length >= 2) {
+        canvasRef.current?.applyProfilePoints(res.points)
+      }
       toast(`✦ AI 已成功拟合【${res.shape_name}】(${res.dynasty})`)
       setMessages((m) => [
         ...m,
@@ -456,11 +459,13 @@ export default function App() {
 
   // 5. AI 松柴窑炉气氛推演处理
   async function handleSimulateFire() {
-    toast('✦ 窑火推演匠正在解算松柴还原热力学方程...')
+    toast('✦ 窑火推演匠正在解算松柴还原热力学方程并点火升温...')
     try {
       const res = await simulateFiringAtmosphere(1300, 'reduction', activeGlaze)
       setFireSim(res)
-      toast(`✦ 气氛推演完成：${res.atmosphere}`)
+      // 联动 3D 场景与仪表盘：动态点火升温至推演温度并执行釉层高温玻化
+      canvasRef.current?.triggerFiring(res.firing_temperature || 1280)
+      toast(`✦ 气氛推演完成：${res.atmosphere}，柴窑正在剧烈还原烧结中！`)
       setMessages((m) => [
         ...m,
         {
@@ -470,7 +475,8 @@ export default function App() {
       ])
     } catch (err) {
       console.error(err)
-      toast('✦ 已维持 1300℃ 强还原标准气氛')
+      canvasRef.current?.triggerFiring(1280)
+      toast('✦ 已点火并维持 1300℃ 强还原标准气氛')
     }
   }
 

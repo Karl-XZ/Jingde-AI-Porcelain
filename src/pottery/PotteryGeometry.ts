@@ -8,6 +8,45 @@ export interface PotteryProfile {
 
 export type PresetType = 'cylinder' | 'meiping' | 'yuhuchun' | 'bowl'
 
+/**
+ * 评估经过一系列控制点 [t, r] 的连续光滑三次 Catmull-Rom / Hermite 样条曲线 (0 <= t <= 1)
+ */
+function evaluateProfileSpline(points: [number, number][], t: number): number {
+  if (points.length === 0) return 3.0
+  if (points.length === 1) return points[0][1]
+
+  const clampedT = Math.max(0, Math.min(1, t))
+  if (clampedT <= points[0][0]) return points[0][1]
+  if (clampedT >= points[points.length - 1][0]) return points[points.length - 1][1]
+
+  let i = 0
+  while (i < points.length - 1 && points[i + 1][0] < clampedT) {
+    i++
+  }
+
+  const p0 = points[Math.max(0, i - 1)]
+  const p1 = points[i]
+  const p2 = points[Math.min(points.length - 1, i + 1)]
+  const p3 = points[Math.min(points.length - 1, i + 2)]
+
+  const span = p2[0] - p1[0]
+  if (span <= 0.0001) return p1[1]
+
+  const u = (clampedT - p1[0]) / span
+  const u2 = u * u
+  const u3 = u2 * u
+
+  const m1 = 0.5 * (p2[1] - p0[1]) * (span / Math.max(0.001, p2[0] - p0[0]))
+  const m2 = 0.5 * (p3[1] - p1[1]) * (span / Math.max(0.001, p3[0] - p1[0]))
+
+  const h00 = 2 * u3 - 3 * u2 + 1
+  const h10 = u3 - 2 * u2 + u
+  const h01 = -2 * u3 + 3 * u2
+  const h11 = u3 - u2
+
+  return h00 * p1[1] + h10 * m1 + h01 * p2[1] + h11 * m2
+}
+
 export class PotteryGeometryBuilder {
   public ringCount: number
   public segments: number
@@ -27,68 +66,71 @@ export class PotteryGeometryBuilder {
   }
 
   /**
-   * 加载经典景德镇器型预设
+   * 加载经典景德镇器型预设（采用严格 C1 连续样条数学模型，彻底杜绝折角断层）
    */
   public loadPreset(preset: PresetType) {
+    let keypoints: [number, number][] = []
+
+    switch (preset) {
+      case 'cylinder':
+        // 初始生坯圆柱泥团：底部略宽，中间直筒，微收口
+        keypoints = [
+          [0.0, 3.6],
+          [0.2, 3.55],
+          [0.6, 3.5],
+          [0.85, 3.45],
+          [1.0, 3.4],
+        ]
+        break
+
+      case 'meiping':
+        // 经典宋明宣德梅瓶：小口如豆、短颈微敛、丰肩圆融、修腹敛足
+        // 关键：肩部在 t=0.76 达到最高丰肩，随后平顺圆转收至束颈 t=0.94，严禁突兀硬棱角
+        keypoints = [
+          [0.0, 1.85],
+          [0.08, 1.9],
+          [0.22, 2.15],
+          [0.45, 2.85],
+          [0.65, 3.65],
+          [0.76, 3.88], // 丰肩饱满点
+          [0.85, 3.4],  // 肩部柔和收弧
+          [0.92, 2.1],  // 颈部平顺收紧
+          [0.96, 1.5],  // 小口束颈
+          [1.0, 1.68],  // 微翻小唇口
+        ]
+        break
+
+      case 'yuhuchun':
+        // 经典玉壶春瓶：撇口、细颈、垂腹、圈足
+        keypoints = [
+          [0.0, 2.1],
+          [0.10, 2.25],
+          [0.28, 4.05], // 垂腹最高峰
+          [0.48, 3.2],
+          [0.72, 1.7],  // 细长柔美颈
+          [0.88, 1.95], // 喇叭撇口起势
+          [1.0, 3.15],  // 优美喇叭撇口沿
+        ]
+        break
+
+      case 'bowl':
+        // 景德镇宋代葵口斗笠碗：斜壁如笠，底小口阔
+        keypoints = [
+          [0.0, 1.75],
+          [0.08, 1.85],
+          [0.32, 3.25],
+          [0.65, 4.95],
+          [0.88, 5.95],
+          [1.0, 6.4],
+        ]
+        break
+    }
+
     for (let i = 0; i < this.ringCount; i++) {
-      const t = i / (this.ringCount - 1) // 0 (bottom) to 1 (top)
-      let r = 3.5
-
-      switch (preset) {
-        case 'cylinder':
-          // 初始生坯圆柱泥团：底部略宽，中间直筒，口沿微收
-          r = 3.6 - t * 0.4 + Math.sin(t * Math.PI) * 0.2
-          break
-
-        case 'meiping':
-          // 梅瓶：小口、短颈、丰肩、修腹、窄底
-          if (t < 0.15) {
-            // 圈足至下腹
-            r = 2.2 + (t / 0.15) * 0.8
-          } else if (t < 0.72) {
-            // 丰肩
-            const st = (t - 0.15) / 0.57
-            r = 3.0 + Math.sin(st * Math.PI * 0.85) * 2.2
-          } else if (t < 0.92) {
-            // 束颈
-            const st = (t - 0.72) / 0.2
-            r = 4.8 - st * 3.3
-          } else {
-            // 小唇口
-            const st = (t - 0.92) / 0.08
-            r = 1.5 + Math.sin(st * Math.PI) * 0.35
-          }
-          break
-
-        case 'yuhuchun':
-          // 玉壶春瓶：撇口、细颈、垂腹、圈足
-          if (t < 0.45) {
-            // 垂腹
-            r = 2.4 + Math.sin((t / 0.45) * Math.PI * 0.9) * 2.6
-          } else if (t < 0.8) {
-            // 细长颈
-            const st = (t - 0.45) / 0.35
-            r = 3.8 - st * 2.3
-          } else {
-            // 喇叭撇口
-            const st = (t - 0.8) / 0.2
-            r = 1.5 + Math.pow(st, 1.8) * 1.6
-          }
-          break
-
-        case 'bowl':
-          // 景德镇葵口斗笠碗
-          if (t < 0.1) {
-            r = 2.0
-          } else {
-            const st = (t - 0.1) / 0.9
-            r = 2.0 + Math.pow(st, 0.7) * 4.2
-          }
-          break
-      }
-
-      this.outerRadii[i] = r
-      this.initialRadii[i] = r
+      const t = i / (this.ringCount - 1)
+      const r = evaluateProfileSpline(keypoints, t)
+      this.outerRadii[i] = Math.max(0.9, Math.min(6.8, r))
+      this.initialRadii[i] = this.outerRadii[i]
     }
   }
 
@@ -180,26 +222,67 @@ export class PotteryGeometryBuilder {
   }
 
   /**
-   * 全体缩放/修坯参数联动 (用于制坯滑块控制)
+   * 全体缩放/修坯参数联动 (采用全器身光滑高斯/smoothstep连续权重，永无截断褶皱)
    */
   public adjustParameters(heightScale: number, rimScale: number, bellyScale: number) {
-    this.height = 14 * heightScale
+    this.height = 14 * Math.max(0.6, Math.min(1.6, heightScale))
+
+    // 寻找当前器型最丰满处 t_max
+    let maxIdx = 0
+    let maxR = -1
+    for (let i = 0; i < this.ringCount; i++) {
+      if (this.initialRadii[i] > maxR) {
+        maxR = this.initialRadii[i]
+        maxIdx = i
+      }
+    }
+    const tBellyPeak = Math.max(0.25, Math.min(0.82, maxIdx / (this.ringCount - 1)))
+
     for (let i = 0; i < this.ringCount; i++) {
       const t = i / (this.ringCount - 1)
       let baseR = this.initialRadii[i]
 
-      // 瓶口缩放
-      if (t > 0.75) {
-        const factor = (t - 0.75) / 0.25
-        baseR *= 1 + (rimScale - 1) * factor
-      }
-      // 瓶腹缩放
-      if (t > 0.2 && t < 0.8) {
-        const factor = Math.sin(((t - 0.2) / 0.6) * Math.PI)
-        baseR *= 1 + (bellyScale - 1) * factor
+      // 1. 腹部/肩部高斯平滑膨胀影响核 (C2 连续，在上下两端自然平稳衰减归零)
+      const bellyDist = (t - tBellyPeak) / 0.28
+      const bellyWeight = Math.exp(-bellyDist * bellyDist)
+      baseR *= 1.0 + (bellyScale - 1.0) * bellyWeight
+
+      // 2. 口沿平滑缩放核 (从 t=0.70 平滑过渡至口沿，一气呵成)
+      if (t > 0.70) {
+        const normT = (t - 0.70) / 0.30
+        const rimWeight = normT * normT * (3 - 2 * normT) // smoothstep
+        baseR *= 1.0 + (rimScale - 1.0) * rimWeight
       }
 
       this.outerRadii[i] = Math.max(0.9, Math.min(6.8, baseR))
+    }
+  }
+
+  /**
+   * 应用 AI 逆推的历代官窑母线控制点并样条插值
+   */
+  public applyProfilePoints(points: Array<{ x?: number; r?: number; y: number }>) {
+    if (!points || points.length < 2) return
+    let minY = Infinity
+    let maxY = -Infinity
+    for (const p of points) {
+      if (p.y < minY) minY = p.y
+      if (p.y > maxY) maxY = p.y
+    }
+    const spanY = Math.max(0.001, maxY - minY)
+
+    const keypoints: [number, number][] = points.map((p) => {
+      const t = (p.y - minY) / spanY
+      const r = p.r !== undefined ? p.r : (p.x !== undefined ? p.x * 3.5 : 3.0)
+      return [t, r]
+    })
+    keypoints.sort((a, b) => a[0] - b[0])
+
+    for (let i = 0; i < this.ringCount; i++) {
+      const t = i / (this.ringCount - 1)
+      const r = evaluateProfileSpline(keypoints, t)
+      this.outerRadii[i] = Math.max(0.9, Math.min(6.8, r))
+      this.initialRadii[i] = this.outerRadii[i]
     }
   }
 
@@ -226,12 +309,12 @@ export class PotteryGeometryBuilder {
       for (let j = 0; j <= M; j++) {
         const u = j / M
         const theta = u * Math.PI * 2
-        const x = Math.cos(theta) * r
-        const z = Math.sin(theta) * r
+        const x = Math.sin(theta) * r
+        const z = -Math.cos(theta) * r
 
         vertices.push(x, y, z)
         // 初始法线暂填水平法线，后续由 computeVertexNormals 精算
-        normals.push(Math.cos(theta), 0, Math.sin(theta))
+        normals.push(Math.sin(theta), 0, -Math.cos(theta))
         uvs.push(u, v)
       }
     }
@@ -259,7 +342,7 @@ export class PotteryGeometryBuilder {
       const inR = Math.max(0.3, outR - this.wallThickness)
       const y = this.height
 
-      vertices.push(Math.cos(theta) * inR, y, Math.sin(theta) * inR)
+      vertices.push(Math.sin(theta) * inR, y, -Math.cos(theta) * inR)
       normals.push(0, 1, 0)
       uvs.push(u, 1.0)
     }
@@ -286,8 +369,8 @@ export class PotteryGeometryBuilder {
       for (let j = 0; j <= M; j++) {
         const u = j / M
         const theta = u * Math.PI * 2
-        vertices.push(Math.cos(theta) * inR, y, Math.sin(theta) * inR)
-        normals.push(-Math.cos(theta), 0, -Math.sin(theta))
+        vertices.push(Math.sin(theta) * inR, y, -Math.cos(theta) * inR)
+        normals.push(-Math.sin(theta), 0, Math.cos(theta))
         uvs.push(u, v)
       }
     }
@@ -357,9 +440,9 @@ export class PotteryGeometryBuilder {
       for (let j = 0; j <= M; j++) {
         const u = j / M
         const theta = u * Math.PI * 2
-        posArray[ptr++] = Math.cos(theta) * r
-        posArray[ptr++] = y
         posArray[ptr++] = Math.sin(theta) * r
+        posArray[ptr++] = y
+        posArray[ptr++] = -Math.cos(theta) * r
       }
     }
 
@@ -369,9 +452,9 @@ export class PotteryGeometryBuilder {
       const theta = u * Math.PI * 2
       const outR = this.outerRadii[N - 1]
       const inR = Math.max(0.3, outR - this.wallThickness)
-      posArray[ptr++] = Math.cos(theta) * inR
-      posArray[ptr++] = this.height
       posArray[ptr++] = Math.sin(theta) * inR
+      posArray[ptr++] = this.height
+      posArray[ptr++] = -Math.cos(theta) * inR
     }
 
     // 3. 更新内壁
@@ -383,9 +466,9 @@ export class PotteryGeometryBuilder {
       for (let j = 0; j <= M; j++) {
         const u = j / M
         const theta = u * Math.PI * 2
-        posArray[ptr++] = Math.cos(theta) * inR
-        posArray[ptr++] = y
         posArray[ptr++] = Math.sin(theta) * inR
+        posArray[ptr++] = y
+        posArray[ptr++] = -Math.cos(theta) * inR
       }
     }
 

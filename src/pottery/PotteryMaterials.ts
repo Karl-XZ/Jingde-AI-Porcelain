@@ -97,16 +97,22 @@ export class PotteryMaterialManager {
   }
 
   /**
-   * 应用 DeepSeek 生成的 SVG 矢量青花/彩绘代码
+    * 应用 DeepSeek 生成的 SVG 矢量青花/彩绘代码 (圆周无缝连续映射)
    */
   public applySvgCode(svgCode: string) {
     const blob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const img = new Image()
     img.onload = () => {
+      // 1. 底层填白瓷羊脂白胎基色
       this.ctx.fillStyle = '#f8f6f0'
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+
+      // 2. 将正统青花大作按圆周环形映射
+      // 几何体坐标系中 u=0.5 (正中) 朝向正面摄像机，u=0/1 位于背面闭合处：
+      // SVG 中心主纹将直接迎面呈现于 3D 瓷瓶正前方，四周连绵环抱，绝无横向挤压变形！
       this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height)
+
       this.texture.needsUpdate = true
       this.material.map = this.texture
       this.material.color.setHex(0xffffff)
@@ -128,15 +134,24 @@ export class PotteryMaterialManager {
     transmission?: number
     ior?: number
     colorTint?: string
+    sheen?: number
   }) {
     if (pbr.roughness !== undefined) this.material.roughness = pbr.roughness
     if (pbr.metalness !== undefined) this.material.metalness = pbr.metalness
     if (pbr.clearcoat !== undefined) this.material.clearcoat = pbr.clearcoat
     if (pbr.clearcoatRoughness !== undefined) this.material.clearcoatRoughness = pbr.clearcoatRoughness
-    if (pbr.transmission !== undefined) this.material.transmission = pbr.transmission
+    // 透光率限制在半透玉质感范围内，防止过高透光导致瓷瓶变透明玻璃
+    if (pbr.transmission !== undefined) this.material.transmission = Math.min(0.22, pbr.transmission)
     if (pbr.ior !== undefined) this.material.ior = pbr.ior
+    if (pbr.sheen !== undefined) {
+      this.material.sheen = pbr.sheen
+      this.material.sheenRoughness = 0.35
+      this.material.sheenColor.set(pbr.colorTint || '#dff2f2')
+    }
     if (pbr.colorTint) {
       this.material.color.set(pbr.colorTint)
+    } else {
+      this.material.color.setHex(0xffffff)
     }
     this.material.needsUpdate = true
   }

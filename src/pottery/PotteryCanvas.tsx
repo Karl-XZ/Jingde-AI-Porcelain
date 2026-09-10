@@ -15,7 +15,8 @@ export interface PotteryCanvasHandle {
   trimFoot: () => void
   clearCanvas: () => void
   aiComposePattern: () => void
-  triggerFiring: () => void
+  triggerFiring: (targetTemp?: number) => void
+  applyProfilePoints: (points: Array<{ x?: number; r?: number; y: number }>) => void
   exportGLB: () => Promise<void>
   exportCert: () => Promise<void>
   exportPoster: () => Promise<void>
@@ -225,13 +226,15 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         } else if (curStep === 'pattern') {
           // 如果正在手绘，停止自转以防笔触偏移；空闲时极微速慢转
           if (!isInteractingRef.current) {
-            turntableGroupRef.current.rotation.y += 0.005
+            turntableGroupRef.current.rotation.y += 0.002
           }
         } else if (curStep === 'glaze') {
-          turntableGroupRef.current.rotation.y += 0.012
+          if (!isInteractingRef.current) {
+            turntableGroupRef.current.rotation.y += 0.0025
+          }
         } else if (curStep === 'finish') {
           if (!isInteractingRef.current) {
-            turntableGroupRef.current.rotation.y += 0.008
+            turntableGroupRef.current.rotation.y += 0.002
           }
         }
       }
@@ -337,6 +340,9 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       // 保持当前手绘或纹饰，不作无端覆盖重置
       matManager.setGlaze('qing', false)
       if (kilnLight) kilnLight.intensity = 0
+      if (turntableGroupRef.current) {
+        turntableGroupRef.current.rotation.y = 0
+      }
     } else if (step === 'glaze') {
       // 根据用户选择的名釉切换真实材质贴图与厚度光泽
       matManager.setGlaze(activeGlaze, false)
@@ -348,32 +354,43 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     } else if (step === 'finish') {
       if (kilnLight) kilnLight.intensity = 0
       matManager.setGlaze(activeGlaze, true)
+      if (turntableGroupRef.current) {
+        turntableGroupRef.current.rotation.y = 0
+      }
     }
   }, [step, activeGlaze, glazeThickness, glazeGloss])
 
-  // 4. 柴窑烧制升温控制
-  const triggerFiring = useCallback(() => {
+  // 4. 柴窑烧制升温控制 (支持任意目标温度与强还原焰动态热力光晕)
+  const triggerFiring = useCallback((targetTemp = 1280) => {
     if (isFiringActive) return
     setIsFiringActive(true)
     onFiringProgressRef.current?.(25, true)
-    onToastRef.current?.('点火升温！柴窑还原焰闭窑烧制中…')
+    onToastRef.current?.('点火升温！柴窑松柴强还原焰闭窑烧制中…')
 
     let temp = 25
+    const stepDelta = Math.max(20, Math.round((targetTemp - 25) / 28))
     const interval = window.setInterval(() => {
-      temp += 45
-      if (temp >= 1280) {
-        temp = 1280
+      temp += stepDelta
+      if (temp >= targetTemp) {
+        temp = targetTemp
         clearInterval(interval)
         setIsFiringActive(false)
-        onFiringProgressRef.current?.(1280, false)
-        onToastRef.current?.('窑温已达 1280°C！釉层完全熔融玻化，开窑成瓷！')
+        onFiringProgressRef.current?.(targetTemp, false)
+        onToastRef.current?.(`窑温已达 ${targetTemp}°C！强还原气氛定色，釉层完全熔融玻化，开窑大吉！`)
+        if (kilnFireLightRef.current) {
+          kilnFireLightRef.current.intensity = 0
+        }
       } else {
         onFiringProgressRef.current?.(temp, true)
+        if (kilnFireLightRef.current) {
+          const ratio = (temp - 25) / (targetTemp - 25)
+          kilnFireLightRef.current.intensity = 3.6 * Math.sin(ratio * Math.PI)
+        }
       }
       setFiringTemp(temp)
-      const progress = (temp - 25) / (1280 - 25)
+      const progress = (temp - 25) / (targetTemp - 25)
       matManagerRef.current?.updateFiringProgress(progress)
-    }, 60)
+    }, 50)
   }, [isFiringActive])
 
   // 5. 鼠标拉坯形变、利坯修型与 3D 自由手绘上色
@@ -565,6 +582,9 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     },
     applySvgMotif: (svgCode: string) => {
       matManagerRef.current?.applySvgCode(svgCode)
+      if (turntableGroupRef.current) {
+        turntableGroupRef.current.rotation.y = 0
+      }
     },
     setGlaze: (glaze: GlazeType) => {
       setIsGlazingAnimation(true)
@@ -609,6 +629,18 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       onToastRef.current?.('AI 智能构图：已在瓶身绘制御窑对称如意云肩与缠枝宝相花纹饰！')
     },
     triggerFiring,
+    applyProfilePoints: (points: Array<{ x?: number; r?: number; y: number }>) => {
+      const builder = builderRef.current
+      const mesh = clayMeshRef.current
+      if (!mesh) return
+      builder.applyProfilePoints(points)
+      builder.syncBaseline()
+      builder.updateGeometryPositions(mesh.geometry)
+      onMeasurementsChangeRef.current?.(
+        parseFloat((builder.height * 2.2).toFixed(1)),
+        parseFloat((builder.outerRadii[builder.ringCount - 1] * 2.5).toFixed(1))
+      )
+    },
     exportGLB: handleExportGLB,
     exportCert: handleExportCert,
     exportPoster: handleExportPoster,
