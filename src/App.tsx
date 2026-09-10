@@ -7,6 +7,18 @@ import { GalleryPage, type RemakeConfig } from './pages/GalleryPage'
 import { type PresetType } from './pottery/PotteryGeometry'
 import { type MotifType, PALETTE_COLORS } from './pottery/patterns'
 import { type GlazeType } from './pottery/PotteryMaterials'
+import {
+  chatWithMentor,
+  inferFormingShape,
+  diagnoseTrimming,
+  generatePatternSvg,
+  synthesizeGlazePBR,
+  simulateFiringAtmosphere,
+  appraiseMasterpiece,
+  type TrimmingDiagnosisResponse,
+  type FiringSimulationResponse,
+  type AppraisalResponse,
+} from './services/aiService'
 import './App.css'
 
 /* ====================== 类型与数据 ====================== */
@@ -234,26 +246,259 @@ export default function App() {
     setMessages([{ role: 'ai', html: AI[k].greet }])
   }
 
-  function ask(q: string) {
+  // 华为 openJiuwen & DeepSeek 智能体协作状态
+  const [isAiThinking, setIsAiThinking] = useState<boolean>(false)
+  const [customShapePrompt, setCustomShapePrompt] = useState<string>('')
+  const [trimDiag, setTrimDiag] = useState<TrimmingDiagnosisResponse>({
+    health_score: 98.6,
+    wall_uniformity: 98.2,
+    status: '优 (微调即佳)',
+    diagnosis: '检测到器身腹部存在微细拉坯高频旋纹，圈足底立墙稍显敦厚，需施以修坯钢刀削平以绝底裂隐患。',
+    toolpath_guidance: '以竹刀定心，外侧修坯铁刀自口沿顺流至足，圈足立墙施以内斜掏削刀法。',
+    actions: { smooth_passes: 2, foot_delta: -0.18 },
+  })
+  const [customMotifPrompt, setCustomMotifPrompt] = useState<string>('')
+  const [isGeneratingSvg, setIsGeneratingSvg] = useState<boolean>(false)
+  const [customGlazePrompt, setCustomGlazePrompt] = useState<string>('')
+  const [isSynthesizingGlaze, setIsSynthesizingGlaze] = useState<boolean>(false)
+  const [fireSim, setFireSim] = useState<FiringSimulationResponse>({
+    atmosphere: '松柴强还原焰 (CO 4.2%)',
+    co_concentration: 4.2,
+    o2_concentration: 0.8,
+    firing_temperature: 1300,
+    thermodynamic_reaction: 'Fe2O3 + CO → 2FeO + CO2↑ （高温下钴料与胎釉完美熔融）',
+    quality_score: 98.8,
+    glaze_transformation: '松柴松脂在 1300℃ 挥发润色，釉层深处形成微观乳浊云雾相，纯青发色沉着内敛。',
+    risk_assessment: '升温斜率平缓，排湿彻底，无针孔缩釉及惊裂隐患。',
+    master_formula: '一烧升温排潮汽，二烧还原吐青翠，三烧熟透保高温，四烧闷火凝玉脂。',
+  })
+  const [appraisal, setAppraisal] = useState<AppraisalResponse>({
+    appraisal_rank: '神品 · 官窑特等',
+    poem: '白釉青花一火成，花从釉里透分明。\n可怜垄上泥土贱，入手翻随富贵生。',
+    poem_annotation: '化用清代龚轼《陶歌》，叹柴窑造化之神秀，青花与玉釉熔于一炉，脱胎换骨。',
+    seal_mark: '大明宣德御窑 · 数字非遗监制',
+    critique: '胎质极紧密而如糯米玉，青花深浅浓淡层次分明，釉表微起橘皮波浪纹，宝光内敛，堪称当代官窑数字典范之器。',
+    market_valuation: '官窑国宝级数字孤品',
+  })
+
+  async function ask(q: string) {
     const text = q.trim()
     if (!text) return
     setMessages((m) => [...m, { role: 'me', html: text }])
     setInput('')
-    let reply = REPLY[text]
-    if (!reply) {
-      if (text.includes('瘦') || text.includes('高') || text.includes('梅瓶') || text.includes('器型')) {
-        reply = '✦ <b>御窑导师口语控瓷</b>：已为您解析指令并推演器型：提升高度比例并收小口径。您可直接在左侧点击「✦ 拟合：宋韵修长梅瓶」一键生效！'
-      } else if (text.includes('龙') || text.includes('纹') || text.includes('画') || text.toLowerCase().includes('svg')) {
-        reply = '✦ <b>御窑导师 SVG 矢量生图</b>：已为您构思对应题材的 <code>&lt;svg&gt;</code> 贝塞尔矢量代码。您可在左侧「AI SVG 矢量青花生成」栏目一键附着至 3D 瓷身！'
-      } else if (text.includes('釉') || text.includes('光') || text.includes('玉') || text.includes('质感')) {
-        reply = '✦ <b>御窑导师 PBR 配方逆推</b>：已逆推对应物理釉面参数。传统釉下彩需配合透明琉璃罩釉，您可在左侧体验「AI 名贵罩釉 PBR 配方调制」。'
-      } else if (text.includes('烧') || text.includes('温') || text.includes('火') || text.includes('窑')) {
-        reply = '✦ <b>御窑导师窑火推演</b>：景德镇柴窑需经预热、强还原至 1300℃ 熔融成瓷。可在左侧点击启动高温烧制，体验还原焰升腾全景！'
-      } else {
+    setIsAiThinking(true)
+
+    try {
+      const history = messages.slice(-6).map((m) => ({
+        role: m.role === 'me' ? 'user' : 'assistant',
+        content: m.html.replace(/<[^>]+>/g, ''),
+      }))
+      const context = {
+        step: curStep,
+        heightScale,
+        rimScale,
+        bellyScale,
+        motif: activeMotif,
+        glaze: activeGlaze,
+        preset: activePreset,
+      }
+
+      const res = await chatWithMentor(text, history, context)
+      setMessages((m) => [...m, { role: 'ai', html: res.reply }])
+
+      // 执行导师下达的口语控瓷交互指令
+      if (res.action && res.action.type !== 'none') {
+        const act = res.action
+        if (act.type === 'update_shape' && act.payload) {
+          if (act.payload.heightScale) setHeightScale(Number(act.payload.heightScale))
+          if (act.payload.rimScale) setRimScale(Number(act.payload.rimScale))
+          if (act.payload.bellyScale) setBellyScale(Number(act.payload.bellyScale))
+          toast('✦ 导师已口语联动调整器型比例')
+        } else if (act.type === 'apply_motif' && act.payload?.motif) {
+          const m = act.payload.motif as MotifType
+          setActiveMotif(m)
+          canvasRef.current?.applyMotif(m)
+          toast(`✦ 导师已为您绘制【${m}】青花纹饰`)
+        } else if (act.type === 'update_glaze' && act.payload?.glaze) {
+          const g = act.payload.glaze as GlazeType
+          setActiveGlaze(g)
+          canvasRef.current?.setGlaze(g)
+          toast(`✦ 导师已为您施【${g}】名贵罩釉`)
+        } else if (act.type === 'trim_foot') {
+          canvasRef.current?.smoothGeometry()
+          canvasRef.current?.trimFoot()
+          toast('✦ 导师已为您执行匀壁修足刀法')
+        } else if (act.type === 'fire_kiln') {
+          canvasRef.current?.triggerFiring()
+          toast('✦ 导师已令开炉起火烧窑！')
+        }
+      }
+    } catch (err) {
+      console.error(err)
+      let reply = REPLY[text]
+      if (!reply) {
         reply = `✦ <b>御窑导师解答</b>：关于“${text}”，在景德镇传统制瓷体系中，讲究“共计一坯之力，过手七十二，方克成器”。每个工序均有独到法门。您可尝试点击快捷提问或使用左侧对应的 AI 工具推进工序！`
       }
+      setMessages((m) => [...m, { role: 'ai', html: reply }])
+    } finally {
+      setIsAiThinking(false)
     }
-    window.setTimeout(() => setMessages((m) => [...m, { role: 'ai', html: reply }]), 350)
+  }
+
+  // 1. AI 器型参数推演处理
+  async function handleInferShape(promptText: string) {
+    if (!promptText.trim()) return
+    toast(`✦ DeepSeek 正在推演【${promptText}】参数...`)
+    setIsAiThinking(true)
+    try {
+      const res = await inferFormingShape(promptText, { heightScale, rimScale, bellyScale })
+      setHeightScale(res.heightScale)
+      setRimScale(res.rimScale)
+      setBellyScale(res.bellyScale)
+      toast(`✦ AI 已成功拟合【${res.shape_name}】(${res.dynasty})`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>DeepSeek 器型推演完成</b>：已根据《景德镇陶录》输出【${res.shape_name}】参数：<code>高 ${res.heightScale}x · 口 ${res.rimScale}x · 腹 ${res.bellyScale}x</code>。<br/>${res.aesthetic_analysis}`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      toast('器型推演暂遇网络波动，已应用名家标准器型比例')
+    } finally {
+      setIsAiThinking(false)
+    }
+  }
+
+  // 2. AI 胎骨诊断与刀法规划处理
+  async function handleDiagnoseAndTrim() {
+    toast('✦ 利坯修骨匠正在全量诊断胎骨均一度...')
+    setIsAiThinking(true)
+    try {
+      const res = await diagnoseTrimming({ heightScale, rimScale, bellyScale })
+      setTrimDiag(res)
+      canvasRef.current?.smoothGeometry()
+      canvasRef.current?.trimFoot()
+      toast(`✦ AI 刀法规划执行完毕：健康度 ${res.health_score} 分`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>AI 胎骨诊断与刀法规划执行完毕</b>：<br/><b>评分</b>：${res.health_score} 分 (${res.status})<br/><b>刀法</b>：${res.toolpath_guidance}<br/><b>分析</b>：${res.diagnosis}`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      canvasRef.current?.smoothGeometry()
+      canvasRef.current?.trimFoot()
+      toast('✦ 已执行基础规整刀法平滑与修足')
+    } finally {
+      setIsAiThinking(false)
+    }
+  }
+
+  // 3. AI SVG 矢量青花生成处理
+  async function handleGenerateSvg(theme: string, typeKey?: MotifType) {
+    if (!theme.trim()) return
+    setIsGeneratingSvg(true)
+    toast(`✦ DeepSeek 正在编译生成【${theme}】SVG 矢量图元...`)
+    try {
+      const res = await generatePatternSvg(theme, typeKey)
+      if (typeKey) setActiveMotif(typeKey)
+      canvasRef.current?.applySvgMotif(res.svg_code)
+      toast(`✦ 已成功将【${res.motif_name}】矢量青花映射至 3D 瓷身！`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>DeepSeek V4 Flash 矢量生成完成</b>：【${res.motif_name}】<br/><b>寓意</b>：${res.symbolism}<br/><b>青花发色</b>：${res.cobalt_notes}<br/><i>SVG 代码已无损附着于 3D 瓷胎表面。</i>`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      if (typeKey) {
+        setActiveMotif(typeKey)
+        canvasRef.current?.applyMotif(typeKey)
+      }
+      toast('✦ 已应用御窑高精青花图饰')
+    } finally {
+      setIsGeneratingSvg(false)
+    }
+  }
+
+  // 4. AI 名贵罩釉 PBR 配方调制处理
+  async function handleSynthesizeGlaze(glazeName: string, defaultType: GlazeType) {
+    if (!glazeName.trim()) return
+    setIsSynthesizingGlaze(true)
+    toast(`✦ 名釉天工匠正在逆推【${glazeName}】PBR 光学配方...`)
+    try {
+      const res = await synthesizeGlazePBR(glazeName)
+      setActiveGlaze(defaultType)
+      canvasRef.current?.applyCustomPBR(res.pbr)
+      toast(`✦ 已成功调制并应用【${res.glaze_name}】(IOR ${res.pbr.ior})`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>名贵罩釉 PBR 配方逆推完成</b>：【${res.glaze_name}】<br/><b>光学指标</b>：折射率 IOR ${res.pbr.ior} · 清漆度 ${res.pbr.clearcoat} · 粗糙度 ${res.pbr.roughness}<br/><b>配方阐述</b>：${res.mineral_formula}<br/><b>渲染机理</b>：${res.optical_rationale}`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      setActiveGlaze(defaultType)
+      canvasRef.current?.setGlaze(defaultType)
+      toast(`✦ 已应用【${defaultType}】经典罩釉`)
+    } finally {
+      setIsSynthesizingGlaze(false)
+    }
+  }
+
+  // 5. AI 松柴窑炉气氛推演处理
+  async function handleSimulateFire() {
+    toast('✦ 窑火推演匠正在解算松柴还原热力学方程...')
+    try {
+      const res = await simulateFiringAtmosphere(1300, 'reduction', activeGlaze)
+      setFireSim(res)
+      toast(`✦ 气氛推演完成：${res.atmosphere}`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>松柴窑炉气氛演化推演</b>：<br/><b>气氛状态</b>：${res.atmosphere}<br/><b>反应方程式</b>：<code>${res.thermodynamic_reaction}</code><br/><b>微观相变</b>：${res.glaze_transformation}<br/><b>把桩要诀</b>：${res.master_formula}`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      toast('✦ 已维持 1300℃ 强还原标准气氛')
+    }
+  }
+
+  // 6. AI 古风赋诗题跋与艺术评级处理
+  async function handleAppraise() {
+    toast('✦ 题跋鉴古匠正在查阅历代官窑著录并赋诗...')
+    try {
+      const res = await appraiseMasterpiece({
+        preset: activePreset,
+        motif: activeMotif,
+        glaze: activeGlaze,
+        heightScale,
+        rimScale,
+        bellyScale,
+      })
+      setAppraisal(res)
+      toast(`✦ 艺术评级完成：${res.appraisal_rank}`)
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          html: `✦ <b>翰林院鉴古御评与题跋</b>：<br/><b>艺术品级</b>：<span style="color:var(--gold-light)">${res.appraisal_rank}</span><br/><b>御制题诗</b>：<br/><i>${res.poem.replace(/\n/g, '<br/>')}</i><br/><b>款识</b>：<code>${res.seal_mark}</code><br/><b>考据</b>：${res.critique}`,
+        },
+      ])
+    } catch (err) {
+      console.error(err)
+      toast('✦ 已完成御制题跋与品级评定')
+    }
   }
 
   /* ---- 顶栏流程导航 ---- */
@@ -351,39 +596,30 @@ export default function App() {
               <div className="ai-chips-grid">
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    setHeightScale(1.18)
-                    setRimScale(0.78)
-                    setBellyScale(1.22)
-                    toast('✦ AI 已推演并拟合【宋韵修长梅瓶】：小口微敛、丰肩挺秀')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>AI 器型推演完成</b>：已输出符合宋代《陶记》规制的梅瓶参数：<code>heightScale: 1.18, rimScale: 0.78, bellyScale: 1.22</code>。重心稳拔，尽显宋式极简静雅之美。',
-                      },
-                    ])
-                  }}
+                  onClick={() => handleInferShape('宋代修长梅瓶')}
                 >
                   ✦ 拟合：宋韵修长梅瓶
                 </button>
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    setHeightScale(0.92)
-                    setRimScale(1.25)
-                    setBellyScale(1.35)
-                    toast('✦ AI 已推演并拟合【明代广腹玉壶春】：大口广腹、下垂圆润')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>AI 器型推演完成</b>：已输出明代永宣宫廷大器规制：<code>heightScale: 0.92, rimScale: 1.25, bellyScale: 1.35</code>。弧度柔美，利于大面积绘制青花缠枝。',
-                      },
-                    ])
-                  }}
+                  onClick={() => handleInferShape('明代广腹玉壶春')}
                 >
                   ✦ 拟合：明代广腹玉壶春
+                </button>
+              </div>
+              <div className="ai-prompt-box">
+                <input
+                  className="ai-prompt-input"
+                  placeholder="自拟器型，如：清代乾隆天球瓶…"
+                  value={customShapePrompt}
+                  onChange={(e) => setCustomShapePrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleInferShape(customShapePrompt) }}
+                />
+                <button
+                  className="ai-prompt-btn"
+                  onClick={() => handleInferShape(customShapePrompt)}
+                >
+                  推演
                 </button>
               </div>
             </div>
@@ -428,28 +664,21 @@ export default function App() {
             <div className="tool-group">
               <div className="tool-glabel">AI 胎骨诊断与刀法规划 (DeepSeek 算法)</div>
               <div className="ai-diagnostic-card">
-                <div className="diag-badge">✦ 胎骨健康度：98.6 分 (优)</div>
-                <div className="diag-text">检测到器腹局部有微小拉坯旋纹，圈足底立墙建议修薄 0.2mm 以防窑内底裂。</div>
+                <div className="diag-badge">✦ 胎骨健康度：{trimDiag.health_score} 分 ({trimDiag.status})</div>
+                <div className="diag-text">{trimDiag.diagnosis}</div>
+                <div style={{ marginTop: '5px', fontSize: '0.72rem', color: 'var(--gold-light)' }}>
+                  推荐刀法：{trimDiag.toolpath_guidance}
+                </div>
               </div>
               <button
                 className="tool-btn ai-btn"
-                onClick={() => {
-                  canvasRef.current?.smoothGeometry()
-                  canvasRef.current?.trimFoot()
-                  toast('✦ AI 刀法执行完成：已进行匀壁并精修圈足')
-                  setMessages((m) => [
-                    ...m,
-                    {
-                      role: 'ai',
-                      html: '✦ <b>AI 刀法规划执行完毕</b>：通过 Laplacian 径向平滑去噪抑制了器身拉坯高频振动纹，并将圈足修平 0.2mm，胎壁均一度提升至 99.8%。',
-                    },
-                  ])
-                }}
+                disabled={isAiThinking}
+                onClick={handleDiagnoseAndTrim}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
-                AI 智能匀壁修足 (一键规整胎骨)
+                {isAiThinking ? 'AI 刀法规划求解中…' : 'AI 智能匀壁修足 (一键规整胎骨)'}
               </button>
             </div>
 
@@ -646,54 +875,40 @@ export default function App() {
               <div className="ai-chips-grid">
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    canvasRef.current?.aiComposePattern()
-                    setActiveMotif('lotus')
-                    toast('✦ DeepSeek 已生成【缠枝宝相花】SVG 矢量图元')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：已按景德镇御窑法式输出 <code>&lt;svg viewBox="0 0 1024 1024"&gt;</code> 矢量青花瓷画！包含如意云头肩饰、主腹宝相花与底足仰覆莲纹，无损光栅化至 3D 瓷身。',
-                      },
-                    ])
-                  }}
+                  disabled={isGeneratingSvg}
+                  onClick={() => handleGenerateSvg('青花缠枝宝相花纹', 'lotus')}
                 >
                   ✦ SVG 矢量生图：缠枝宝相花
                 </button>
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    canvasRef.current?.applyMotif('dragon')
-                    setActiveMotif('dragon')
-                    toast('✦ DeepSeek 已生成【云水祥龙】SVG 矢量图元')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：输出 <code>&lt;path d="..."&gt;</code> 云水穿梭祥龙路径。五爪矫健，纯正苏麻离青发色，无栅格噪点。',
-                      },
-                    ])
-                  }}
+                  disabled={isGeneratingSvg}
+                  onClick={() => handleGenerateSvg('御窑云水穿梭祥龙纹', 'dragon')}
                 >
                   ✦ SVG 矢量生图：云水祥龙纹
                 </button>
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    canvasRef.current?.applyMotif('fish')
-                    setActiveMotif('fish')
-                    toast('✦ DeepSeek 已生成【鱼藻清漪】SVG 矢量图元')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>DeepSeek V4 Flash 矢量生成</b>：输出鱼藻生动图元，游鱼相戏于荇藻之间，兼具元明青花之悠然灵韵。',
-                      },
-                    ])
-                  }}
+                  disabled={isGeneratingSvg}
+                  onClick={() => handleGenerateSvg('明宣德青花鱼藻清漪图', 'fish')}
                 >
                   ✦ SVG 矢量生图：鱼藻清漪图
+                </button>
+              </div>
+              <div className="ai-prompt-box">
+                <input
+                  className="ai-prompt-input"
+                  placeholder="自拟意境，如：松鹤延年、踏雪寻梅…"
+                  value={customMotifPrompt}
+                  onChange={(e) => setCustomMotifPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateSvg(customMotifPrompt) }}
+                />
+                <button
+                  className="ai-prompt-btn"
+                  disabled={isGeneratingSvg}
+                  onClick={() => handleGenerateSvg(customMotifPrompt)}
+                >
+                  {isGeneratingSvg ? '生成中…' : '生图'}
                 </button>
               </div>
             </div>
@@ -773,41 +988,33 @@ export default function App() {
               <div className="ai-chips-grid">
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    setActiveGlaze('jade')
-                    canvasRef.current?.setGlaze('jade')
-                    setGlazeGloss(0.72)
-                    setGlazeThickness(1.2)
-                    toast('✦ AI 逆推已应用【影青温润仿玉釉】：折射率 1.48 · 羊脂凝润')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>AI PBR 逆推成功</b>：逆向生成景德镇宋代湖田窑影青仿玉釉配方：<code>roughness: 0.22, clearcoat: 0.65, ior: 1.48</code>。青花底色完整透出，积釉处泛出如玉般的凝脂微光。',
-                      },
-                    ])
-                  }}
+                  disabled={isSynthesizingGlaze}
+                  onClick={() => handleSynthesizeGlaze('景德镇影青温润仿玉釉', 'jade')}
                 >
-                  ✦ AI 调制：影青温润仿玉釉
+                  ✦ 拟合：影青温润仿玉釉
                 </button>
                 <button
                   className="ai-chip-btn"
-                  onClick={() => {
-                    setActiveGlaze('gloss')
-                    canvasRef.current?.setGlaze('gloss')
-                    setGlazeGloss(0.98)
-                    setGlazeThickness(0.9)
-                    toast('✦ AI 逆推已应用【永乐甜白玻璃釉】：折射率 1.54 · 极净镜面')
-                    setMessages((m) => [
-                      ...m,
-                      {
-                        role: 'ai',
-                        html: '✦ <b>AI PBR 逆推成功</b>：逆向生成明永宣极品纯澈玻璃罩釉：<code>roughness: 0.03, clearcoat: 1.0, ior: 1.54</code>。镜面高反光，纯净凸显釉下青花发色。',
-                      },
-                    ])
-                  }}
+                  disabled={isSynthesizingGlaze}
+                  onClick={() => handleSynthesizeGlaze('纯澈玻璃高光透明釉', 'gloss')}
                 >
-                  ✦ AI 调制：纯澈玻璃亮光釉
+                  ✦ 拟合：纯澈玻璃亮光釉
+                </button>
+              </div>
+              <div className="ai-prompt-box">
+                <input
+                  className="ai-prompt-input"
+                  placeholder="名釉品名，如：郎窑牛血红、茶叶末…"
+                  value={customGlazePrompt}
+                  onChange={(e) => setCustomGlazePrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSynthesizeGlaze(customGlazePrompt, 'crackle') }}
+                />
+                <button
+                  className="ai-prompt-btn"
+                  disabled={isSynthesizingGlaze}
+                  onClick={() => handleSynthesizeGlaze(customGlazePrompt, 'crackle')}
+                >
+                  {isSynthesizingGlaze ? '逆推中…' : '逆推'}
                 </button>
               </div>
             </div>
@@ -857,9 +1064,18 @@ export default function App() {
             <div className="tool-group">
               <div className="tool-glabel">AI 松柴窑炉气氛演化推演</div>
               <div className="ai-diagnostic-card">
-                <div className="diag-badge">✦ 还原气氛演化：CO 浓度 4.2%</div>
-                <div className="diag-text">松柴富含天然松脂与水气，强还原阶段一氧化碳将钴料与铜离子还原出青翠与娇艳宝光。</div>
+                <div className="diag-badge">✦ 气氛演化：{fireSim.atmosphere} (CO {fireSim.co_concentration}%)</div>
+                <div className="diag-text">{fireSim.glaze_transformation}</div>
+                <div style={{ marginTop: '5px', fontSize: '0.72rem', color: 'var(--gold-light)' }}>
+                  热力学反应：<code>{fireSim.thermodynamic_reaction}</code>
+                </div>
               </div>
+              <button
+                className="tool-btn ai-btn"
+                onClick={handleSimulateFire}
+              >
+                ✦ 重新推演松柴还原气氛
+              </button>
             </div>
 
             <div className="tool-group">
@@ -903,6 +1119,8 @@ export default function App() {
                 <div className="cert-row"><span className="k">编号</span><span className="v">JDZ-2026-0427</span></div>
                 <div className="cert-row"><span className="k">器型</span><span className="v">{PRESET_LIST.find(p => p.id === activePreset)?.name ?? '青花梅瓶'}</span></div>
                 <div className="cert-row"><span className="k">尺寸</span><span className="v">H {measuredHeight}cm · ⌀{measuredRim}cm</span></div>
+                <div className="cert-row"><span className="k">品级</span><span className="v" style={{ color: 'var(--gold-light)' }}>{appraisal.appraisal_rank}</span></div>
+                <div className="cert-row"><span className="k">款识</span><span className="v">{appraisal.seal_mark}</span></div>
                 <div className="cert-row"><span className="k">釉色</span><span className="v">{GLAZE_LIST.find(g => g.id === activeGlaze)?.name ?? '亮光透明釉'}</span></div>
                 <div className="cert-row"><span className="k">窑口</span><span className="v">景德镇御窑厂遗址</span></div>
                 <div className="cert-row"><span className="k">烧制</span><span className="v">1280°C 柴窑还原焰</span></div>
@@ -912,23 +1130,19 @@ export default function App() {
             <div className="tool-group">
               <div className="tool-glabel">AI 古风赋诗题跋与艺术评级</div>
               <div className="ai-diagnostic-card">
-                <div className="diag-badge">✦ 艺术品级：神品 · 官窑特等</div>
+                <div className="diag-badge">✦ 艺术品级：{appraisal.appraisal_rank}</div>
                 <div className="diag-text" style={{ fontStyle: 'italic', color: 'var(--ochre)' }}>
-                  “白釉青花一火成，花从釉里透分明。<br />可怜垄上泥土贱，入手翻随富贵生。”
+                  {appraisal.poem.split('\n').map((line, idx) => (
+                    <span key={idx}>{line}<br /></span>
+                  ))}
+                </div>
+                <div style={{ marginTop: '5px', fontSize: '0.72rem', color: 'var(--gold-light)' }}>
+                  款识：{appraisal.seal_mark}
                 </div>
               </div>
               <button
                 className="tool-btn ai-btn"
-                onClick={() => {
-                  toast('✦ AI 已重新为当前作品题画赋诗，并同步更新至证书著录')
-                  setMessages((m) => [
-                    ...m,
-                    {
-                      role: 'ai',
-                      html: '✦ <b>AI 题画诗与评级生成</b>：<br/><b>品名</b>：青花缠枝莲梅瓶<br/><b>题诗</b>：<i>雨过天青云破处，这般颜色做将来。</i><br/><b>评语</b>：宣德遗风，骨秀神清，青花发色沉稳入胎，釉光纯澈如琉璃明镜，堪称非遗数字重器！',
-                    },
-                  ])
-                }}
+                onClick={handleAppraise}
               >
                 ✦ AI 重新题跋作诗与估价
               </button>
@@ -1042,7 +1256,7 @@ export default function App() {
       <div className="ai-head">
         <div className="ai-it">
           <div className="n">御窑非遗导师 Agent</div>
-          <div className="s"><span className="d" />在线 · DeepSeek 景德镇大模型中枢</div>
+          <div className="s"><span className="d" />在线 · DeepSeek 景德镇大模型中枢 (openJiuwen 驱动)</div>
         </div>
         <div className="ai-step-tag">{ai.tag}</div>
       </div>
@@ -1052,6 +1266,16 @@ export default function App() {
             <div className="b" dangerouslySetInnerHTML={{ __html: m.html }} />
           </div>
         ))}
+        {isAiThinking && (
+          <div className="msg ai">
+            <div className="b">
+              <div className="ai-thinking-indicator">
+                <span className="ai-dot-flashing" />
+                <span>御窑非遗导师正在思索并协同工序专家推演…</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="ai-quick">
           <div className="qh">导师快捷提问与指令</div>
           {ai.quick.map((q) => (

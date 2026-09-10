@@ -1975,4 +1975,128 @@
   transform: translateY(-1px);
 }
 
+/* =========================================================================
+ * 华为 openJiuwen & DeepSeek AI 工具模块样式
+ * ========================================================================= */
+
+.ai-chips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ai-chip-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  background: rgba(36, 32, 28, 0.7);
+  border: 1px solid rgba(201, 162, 79, 0.35);
+  color: var(--ivory);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.ai-chip-btn:hover {
+  background: rgba(201, 162, 79, 0.2);
+  border-color: var(--gold-light);
+  color: var(--gold-light);
+  transform: translateX(2px);
+}
+
+.ai-diagnostic-card {
+  background: rgba(26, 23, 20, 0.85);
+  border: 1px solid rgba(201, 162, 79, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.ai-diagnostic-card .diag-badge {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--gold-light);
+  margin-bottom: 5px;
+}
+
+.ai-diagnostic-card .diag-text {
+  font-size: 0.78rem;
+  color: var(--ivory-warm);
+  line-height: 1.55;
+}
+
+.ai-prompt-box {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ai-prompt-input {
+  flex: 1;
+  background: rgba(18, 16, 14, 0.85);
+  border: 1px solid rgba(201, 162, 79, 0.3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--ivory);
+  font-family: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.ai-prompt-input:focus {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 1px rgba(201, 162, 79, 0.4);
+}
+
+.ai-prompt-btn {
+  background: linear-gradient(135deg, rgba(201, 162, 79, 0.3), rgba(232, 116, 59, 0.3));
+  border: 1px solid rgba(201, 162, 79, 0.45);
+  color: var(--gold-light);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.ai-prompt-btn:hover {
+  background: linear-gradient(135deg, var(--gold-light), var(--ochre));
+  color: #1a1714;
+}
+
+.ai-thinking-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--gold-light);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.ai-dot-flashing {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--gold-light);
+  animation: dotFlashing 1s infinite alternate;
+}
+
+@keyframes dotFlashing {
+  0% { opacity: 0.2; transform: scale(0.8); }
+  100% { opacity: 1.0; transform: scale(1.2); }
+}
+
+
 

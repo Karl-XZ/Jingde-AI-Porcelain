@@ -8,7 +8,9 @@ import { type MotifType } from './patterns'
 export interface PotteryCanvasHandle {
   loadPreset: (preset: PresetType) => void
   applyMotif: (motif: MotifType) => void
+  applySvgMotif: (svgCode: string) => void
   setGlaze: (glaze: GlazeType) => void
+  applyCustomPBR: (pbr: Record<string, number | string | undefined>) => void
   smoothGeometry: () => void
   trimFoot: () => void
   clearCanvas: () => void
@@ -561,9 +563,17 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     applyMotif: (motif: MotifType) => {
       matManagerRef.current?.applyPattern(motif)
     },
+    applySvgMotif: (svgCode: string) => {
+      matManagerRef.current?.applySvgCode(svgCode)
+    },
     setGlaze: (glaze: GlazeType) => {
       setIsGlazingAnimation(true)
       matManagerRef.current?.setGlaze(glaze, false)
+      setTimeout(() => setIsGlazingAnimation(false), 800)
+    },
+    applyCustomPBR: (pbr: Record<string, number | string | undefined>) => {
+      setIsGlazingAnimation(true)
+      matManagerRef.current?.applyCustomPbr(pbr)
       setTimeout(() => setIsGlazingAnimation(false), 800)
     },
     smoothGeometry: () => {

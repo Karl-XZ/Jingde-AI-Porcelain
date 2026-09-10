@@ -97,6 +97,51 @@ export class PotteryMaterialManager {
   }
 
   /**
+   * 应用 DeepSeek 生成的 SVG 矢量青花/彩绘代码
+   */
+  public applySvgCode(svgCode: string) {
+    const blob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.onload = () => {
+      this.ctx.fillStyle = '#f8f6f0'
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+      this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height)
+      this.texture.needsUpdate = true
+      this.material.map = this.texture
+      this.material.color.setHex(0xffffff)
+      this.material.needsUpdate = true
+      this.hasUserPainting = true
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
+  }
+
+  /**
+   * 应用 DeepSeek 逆推生成的名贵罩釉 PBR 光学参数
+   */
+  public applyCustomPbr(pbr: {
+    roughness?: number
+    metalness?: number
+    clearcoat?: number
+    clearcoatRoughness?: number
+    transmission?: number
+    ior?: number
+    colorTint?: string
+  }) {
+    if (pbr.roughness !== undefined) this.material.roughness = pbr.roughness
+    if (pbr.metalness !== undefined) this.material.metalness = pbr.metalness
+    if (pbr.clearcoat !== undefined) this.material.clearcoat = pbr.clearcoat
+    if (pbr.clearcoatRoughness !== undefined) this.material.clearcoatRoughness = pbr.clearcoatRoughness
+    if (pbr.transmission !== undefined) this.material.transmission = pbr.transmission
+    if (pbr.ior !== undefined) this.material.ior = pbr.ior
+    if (pbr.colorTint) {
+      this.material.color.set(pbr.colorTint)
+    }
+    this.material.needsUpdate = true
+  }
+
+  /**
    * 清空白胎，方便用户 100% 自主手绘
    */
   public clearCanvas(color = '#f8f6f0') {
