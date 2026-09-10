@@ -192,10 +192,8 @@ export function DigitalHumanMentor({
               },
             ],
           },
-          onWidgetEvent(data: any) {
-            if (data?.type === 'subtitle_on' && data.text) {
-              setSubtitle(data.text)
-            }
+          onWidgetEvent(_data: any) {
+            // 字幕直接完整显示每次回复的完整内容（<=50字），不按每句话切片打碎
           },
           onVoiceStateChange(s: string) {
             setIsSpeaking(s === 'start')
