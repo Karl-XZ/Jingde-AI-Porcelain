@@ -21,3 +21,9 @@ DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 OPENJIUWEN_SWARM_NAME = "JingdezhenImperialKilnSwarm"
 SERVER_PORT = int(os.getenv("PORT", "8000"))
 SERVER_HOST = "127.0.0.1"
+
+# XMOV (魔珐星云) Digital Human settings
+XMOV_APP_ID = os.getenv("XMOV_APP_ID", "9e366289805f4fd7ad9a6879bf64c698")
+XMOV_APP_SECRET = os.getenv("XMOV_APP_SECRET", "fca83e091ace40d59acb2c812e469499")
+XMOV_GATEWAY = os.getenv("XMOV_GATEWAY", "https://nebula-agent.xingyun3d.com/user/v1/ttsa/session")
+XMOV_AVATAR_LOOK = os.getenv("XMOV_AVATAR_LOOK", "N_Wuliping_14333_new")

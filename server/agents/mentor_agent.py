@@ -55,7 +55,11 @@ class MasterMentorAgent(BaseJiuwenAgent):
                           f"纹样={current_context.get('motif', 'lotus')}, " \
                           f"釉色={current_context.get('glaze', 'jade')}]"
 
-        user_prompt = f"{message}{context_str}"
+        digital_human_constraint = ""
+        if current_context and current_context.get("is_digital_human"):
+            digital_human_constraint = "\n【重要口播限制：当前处于数字人实时语音交互模式。请务必将 reply 回复严格控制在 50 字以内！语言凝练典雅，直陈核心工艺要诀与控瓷指令，严禁长篇大论，适合直接口播朗读。】"
+
+        user_prompt = f"{message}{context_str}{digital_human_constraint}"
         raw_resp = await self.chat(user_prompt, history=history, temperature=0.7)
         parsed = self.extract_json(raw_resp)
 

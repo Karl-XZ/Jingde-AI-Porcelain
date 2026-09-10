@@ -7,6 +7,7 @@ import {
   type SyncVaseState,
 } from './components/LandingPorcelain3D'
 import { LandingBgPorcelain3D } from './components/LandingBgPorcelain3D'
+import { DigitalHumanMentor } from './components/DigitalHumanMentor'
 import { CraftGuidePage } from './pages/CraftGuidePage'
 import { GalleryPage, type RemakeConfig } from './pages/GalleryPage'
 import { type PresetType } from './pottery/PotteryGeometry'
@@ -14,6 +15,7 @@ import { type MotifType, PALETTE_COLORS } from './pottery/patterns'
 import { type GlazeType } from './pottery/PotteryMaterials'
 import {
   chatWithMentor,
+  type MentorChatResponse,
   inferFormingShape,
   diagnoseTrimming,
   generatePatternSvg,
@@ -212,6 +214,7 @@ export default function App() {
   const [glazeGloss, setGlazeGloss] = useState<number>(0.85)
   const [firingTemp, setFiringTemp] = useState<number>(25)
   const [isFiringActive, setIsFiringActive] = useState<boolean>(false)
+  const [isDigitalHumanActive, setIsDigitalHumanActive] = useState<boolean>(false)
 
   const canvasRef = useRef<PotteryCanvasHandle>(null)
 
@@ -308,9 +311,35 @@ export default function App() {
     market_valuation: '官窑国宝级数字孤品',
   })
 
-  async function ask(q: string) {
+  function handleMentorAction(act: { type: string; payload?: Record<string, unknown> }) {
+    if (act.type === 'update_shape' && act.payload) {
+      if (act.payload.heightScale) setHeightScale(Number(act.payload.heightScale))
+      if (act.payload.rimScale) setRimScale(Number(act.payload.rimScale))
+      if (act.payload.bellyScale) setBellyScale(Number(act.payload.bellyScale))
+      toast('✦ 导师已口语联动调整器型比例')
+    } else if (act.type === 'apply_motif' && act.payload?.motif) {
+      const m = act.payload.motif as MotifType
+      setActiveMotif(m)
+      canvasRef.current?.applyMotif(m)
+      toast(`✦ 导师已为您绘制【${m}】青花纹饰`)
+    } else if (act.type === 'update_glaze' && act.payload?.glaze) {
+      const g = act.payload.glaze as GlazeType
+      setActiveGlaze(g)
+      canvasRef.current?.setGlaze(g)
+      toast(`✦ 导师已为您施【${g}】名贵罩釉`)
+    } else if (act.type === 'trim_foot') {
+      canvasRef.current?.smoothGeometry()
+      canvasRef.current?.trimFoot()
+      toast('✦ 导师已为您执行匀壁修足刀法')
+    } else if (act.type === 'fire_kiln') {
+      canvasRef.current?.triggerFiring()
+      toast('✦ 导师已令开炉起火烧窑！')
+    }
+  }
+
+  async function ask(q: string, isDigitalHuman = false): Promise<MentorChatResponse> {
     const text = q.trim()
-    if (!text) return
+    if (!text) return { reply: '', action: { type: 'none' } }
     setMessages((m) => [...m, { role: 'me', html: text }])
     setInput('')
     setIsAiThinking(true)
@@ -328,6 +357,7 @@ export default function App() {
         motif: activeMotif,
         glaze: activeGlaze,
         preset: activePreset,
+        is_digital_human: isDigitalHuman,
       }
 
       const res = await chatWithMentor(text, history, context)
@@ -335,38 +365,19 @@ export default function App() {
 
       // 执行导师下达的口语控瓷交互指令
       if (res.action && res.action.type !== 'none') {
-        const act = res.action
-        if (act.type === 'update_shape' && act.payload) {
-          if (act.payload.heightScale) setHeightScale(Number(act.payload.heightScale))
-          if (act.payload.rimScale) setRimScale(Number(act.payload.rimScale))
-          if (act.payload.bellyScale) setBellyScale(Number(act.payload.bellyScale))
-          toast('✦ 导师已口语联动调整器型比例')
-        } else if (act.type === 'apply_motif' && act.payload?.motif) {
-          const m = act.payload.motif as MotifType
-          setActiveMotif(m)
-          canvasRef.current?.applyMotif(m)
-          toast(`✦ 导师已为您绘制【${m}】青花纹饰`)
-        } else if (act.type === 'update_glaze' && act.payload?.glaze) {
-          const g = act.payload.glaze as GlazeType
-          setActiveGlaze(g)
-          canvasRef.current?.setGlaze(g)
-          toast(`✦ 导师已为您施【${g}】名贵罩釉`)
-        } else if (act.type === 'trim_foot') {
-          canvasRef.current?.smoothGeometry()
-          canvasRef.current?.trimFoot()
-          toast('✦ 导师已为您执行匀壁修足刀法')
-        } else if (act.type === 'fire_kiln') {
-          canvasRef.current?.triggerFiring()
-          toast('✦ 导师已令开炉起火烧窑！')
-        }
+        handleMentorAction(res.action)
       }
+      return res
     } catch (err) {
       console.error(err)
       let reply = REPLY[text]
       if (!reply) {
-        reply = `✦ <b>御窑导师解答</b>：关于“${text}”，在景德镇传统制瓷体系中，讲究“共计一坯之力，过手七十二，方克成器”。每个工序均有独到法门。您可尝试点击快捷提问或使用左侧对应的 AI 工具推进工序！`
+        reply = isDigitalHuman
+          ? `督陶官收到关于“${text}”之问。瓷艺过手七十二道工序，请随时下达控瓷指令。`
+          : `✦ <b>御窑导师解答</b>：关于“${text}”，在景德镇传统制瓷体系中，讲究“共计一坯之力，过手七十二，方克成器”。每个工序均有独到法门。您可尝试点击快捷提问或使用左侧对应的 AI 工具推进工序！`
       }
       setMessages((m) => [...m, { role: 'ai', html: reply }])
+      return { reply, action: { type: 'none' } }
     } finally {
       setIsAiThinking(false)
     }
@@ -1305,62 +1316,89 @@ export default function App() {
   /* ---- 右侧 AI 助手 ---- */
   const ai = AI[curStep]
   const aiPanel = (
-    <div className="aipanel">
+    <div className={`aipanel ${isDigitalHumanActive ? 'digital-human-mode' : ''}`}>
       <div className="ai-head">
         <div className="ai-it">
           <div className="n">御窑非遗导师 Agent</div>
           <div className="s"><span className="d" />在线 · DeepSeek 景德镇大模型中枢 (openJiuwen 驱动)</div>
         </div>
-        <div className="ai-step-tag">{ai.tag}</div>
-      </div>
-      <div className="ai-body">
-        {messages.map((m, i) => (
-          <div className={`msg ${m.role}`} key={i}>
-            <div className="b" dangerouslySetInnerHTML={{ __html: m.html }} />
-          </div>
-        ))}
-        {isAiThinking && (
-          <div className="msg ai">
-            <div className="b">
-              <div className="ai-thinking-indicator">
-                <span className="ai-dot-flashing" />
-                <span>御窑非遗导师正在思索并协同工序专家推演…</span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="ai-quick">
-          <div className="qh">导师快捷提问与指令</div>
-          {ai.quick.map((q) => (
-            <span className="qchip" key={q} onClick={() => ask(q)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: CHAT_ICON }} />
-              {q}
-            </span>
-          ))}
-        </div>
-        <div className="ai-suggest">
-          <div className="sh">✦ 非遗工艺要诀</div>
-          {ai.sugg.map((s) => (
-            <div className="sug" key={s.t} onClick={() => ask(s.t + '要决与技法？')}>
-              <div className="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SUG_ICONS[s.ic] ?? SUG_ICONS.v }} /></div>
-              <div className="st"><div className="t">{s.t}</div><div className="d">{s.d}</div></div>
-              <div className="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6" /></svg></div>
-            </div>
-          ))}
+        <div className="ai-head-actions">
+          <button
+            className={`activate-avatar-btn ${isDigitalHumanActive ? 'active' : ''}`}
+            onClick={() => setIsDigitalHumanActive((v) => !v)}
+            title={isDigitalHumanActive ? '切回普通文字对话' : '激活 3D 实时数字人导师'}
+          >
+            <span className="avatar-btn-spark">✦</span>
+            <span>{isDigitalHumanActive ? '切回文字' : '激活数字人'}</span>
+          </button>
+          <div className="ai-step-tag">{ai.tag}</div>
         </div>
       </div>
-      <div className="ai-input">
-        <input
-          className="box"
-          value={input}
-          placeholder="向御窑非遗导师提问、下达口语控瓷指令…"
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') ask(input) }}
+
+      {isDigitalHumanActive ? (
+        <DigitalHumanMentor
+          onClose={() => setIsDigitalHumanActive(false)}
+          onAsk={ask}
+          onAction={handleMentorAction}
+          currentStep={curStep}
+          currentHeightScale={heightScale}
+          currentRimScale={rimScale}
+          currentBellyScale={bellyScale}
+          activeMotif={activeMotif}
+          activeGlaze={activeGlaze}
         />
-        <button className="send" onClick={() => ask(input)} title="发送消息">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SEND_ICON }} />
-        </button>
-      </div>
+      ) : (
+        <>
+          <div className="ai-body">
+            {messages.map((m, i) => (
+              <div className={`msg ${m.role}`} key={i}>
+                <div className="b" dangerouslySetInnerHTML={{ __html: m.html }} />
+              </div>
+            ))}
+            {isAiThinking && (
+              <div className="msg ai">
+                <div className="b">
+                  <div className="ai-thinking-indicator">
+                    <span className="ai-dot-flashing" />
+                    <span>御窑非遗导师正在思索并协同工序专家推演…</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="ai-quick">
+              <div className="qh">导师快捷提问与指令</div>
+              {ai.quick.map((q) => (
+                <span className="qchip" key={q} onClick={() => ask(q)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: CHAT_ICON }} />
+                  {q}
+                </span>
+              ))}
+            </div>
+            <div className="ai-suggest">
+              <div className="sh">✦ 非遗工艺要诀</div>
+              {ai.sugg.map((s) => (
+                <div className="sug" key={s.t} onClick={() => ask(s.t + '要决与技法？')}>
+                  <div className="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SUG_ICONS[s.ic] ?? SUG_ICONS.v }} /></div>
+                  <div className="st"><div className="t">{s.t}</div><div className="d">{s.d}</div></div>
+                  <div className="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6" /></svg></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="ai-input">
+            <input
+              className="box"
+              value={input}
+              placeholder="向御窑非遗导师提问、下达口语控瓷指令…"
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') ask(input) }}
+            />
+            <button className="send" onClick={() => ask(input)} title="发送消息">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} dangerouslySetInnerHTML={{ __html: SEND_ICON }} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 

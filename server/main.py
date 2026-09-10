@@ -12,7 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
-from server.config import SERVER_HOST, SERVER_PORT
+from server.config import (
+    SERVER_HOST,
+    SERVER_PORT,
+    XMOV_APP_ID,
+    XMOV_APP_SECRET,
+    XMOV_GATEWAY,
+    XMOV_AVATAR_LOOK,
+)
 from server.swarm import swarm_instance
 
 app = FastAPI(
@@ -82,6 +89,21 @@ async def health_check():
         "framework": "Huawei openJiuwen",
         "model": "DeepSeek V4 Flash (Intl)",
         "swarm": swarm_instance.get_swarm_info(),
+    }
+
+
+@app.get("/api/avatar/config")
+@app.post("/api/avatar/config")
+async def get_avatar_config():
+    """获取 XMOV 数字人配置参数"""
+    return {
+        "code": 0,
+        "data": {
+            "appId": XMOV_APP_ID,
+            "appSecret": XMOV_APP_SECRET,
+            "gatewayServer": XMOV_GATEWAY,
+            "avatarLook": XMOV_AVATAR_LOOK,
+        }
     }
 
 

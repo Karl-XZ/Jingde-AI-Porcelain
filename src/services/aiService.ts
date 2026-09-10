@@ -286,3 +286,23 @@ export async function appraiseMasterpiece(
     fallback
   )
 }
+
+/**
+ * 8. 获取 XMOV 数字人服务配置
+ */
+export interface AvatarConfigResponse {
+  appId: string
+  appSecret: string
+  gatewayServer: string
+  avatarLook: string
+}
+
+export async function getAvatarConfig(): Promise<AvatarConfigResponse> {
+  const fallback: AvatarConfigResponse = {
+    appId: '9e366289805f4fd7ad9a6879bf64c698',
+    appSecret: 'fca83e091ace40d59acb2c812e469499',
+    gatewayServer: 'https://nebula-agent.xingyun3d.com/user/v1/ttsa/session',
+    avatarLook: 'N_Wuliping_14333_new',
+  }
+  return fetchApi<AvatarConfigResponse>('/avatar/config', {}, fallback)
+}
