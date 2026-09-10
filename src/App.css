@@ -958,6 +958,46 @@
   pointer-events: none;
 }
 
+/* 3D 视口控制按钮组 (缩放/复位) */
+.canvas-viewport-controls {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 12;
+}
+
+.viewport-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(18, 14, 11, 0.78);
+  border: 1px solid rgba(201, 162, 79, 0.35);
+  color: var(--ivory-warm, #f8f6f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+}
+
+.viewport-btn:hover {
+  background: rgba(201, 162, 79, 0.25);
+  border-color: rgba(201, 162, 79, 0.7);
+  color: #ffdf9e;
+  transform: translateY(-1px);
+}
+
+.viewport-btn:active {
+  transform: translateY(0);
+  background: rgba(201, 162, 79, 0.35);
+}
+
 /* 柴窑阶段燃烧浮层 */
 .fire-overlay {
   position: absolute;

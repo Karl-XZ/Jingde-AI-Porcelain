@@ -21,6 +21,8 @@ export interface PotteryCanvasHandle {
   exportCert: () => Promise<void>
   exportPoster: () => Promise<void>
   resetGeometry: () => void
+  zoomCamera: (deltaDist: number) => void
+  resetCamera: () => void
 }
 
 export interface PotteryCanvasProps {
@@ -120,6 +122,35 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
   useEffect(() => {
     onToastRef.current = onToast
   }, [onToast])
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // 3D 视口相机平滑缩放与复位
+  const zoomCamera = useCallback((deltaDist: number) => {
+    const camera = cameraRef.current
+    if (!camera) return
+    const target = new THREE.Vector3(0, 6.5, 0)
+    const dir = camera.position.clone().sub(target)
+    const currentDist = dir.length()
+    if (currentDist < 0.001) return
+    dir.normalize()
+
+    // 限制视距在 6.0 (超微距观赏苏料铁锈斑与开片) 到 55.0 之间
+    const newDist = THREE.MathUtils.clamp(currentDist + deltaDist, 6.0, 55.0)
+    camera.position.copy(target).add(dir.multiplyScalar(newDist))
+    camera.lookAt(target)
+  }, [])
+
+  const resetCamera = useCallback(() => {
+    const camera = cameraRef.current
+    if (!camera) return
+    camera.position.set(0, 10, 25)
+    camera.lookAt(0, 6.5, 0)
+    if (turntableGroupRef.current) {
+      turntableGroupRef.current.rotation.y = 0
+    }
+    onToastRef.current?.('视口已复位至默认正面观察角度')
+  }, [])
 
   // 1. 初始化 Three.js 场景与画布
   useEffect(() => {
@@ -257,15 +288,62 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     }
     window.addEventListener('resize', handleResize)
 
+    // 滚轮缩放与双指捏合缩放 (W3C 标准非被动监听，阻止网页滚动劫持)
+    let touchStartDist: number | null = null
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      // 精确触控板双指缩放时 e.ctrlKey 为 true，此时 deltaY 通常较灵敏
+      const speed = e.ctrlKey ? 0.04 : 0.025
+      const delta = e.deltaY * speed
+      zoomCamera(delta)
+    }
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        touchStartDist = Math.hypot(dx, dy)
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && touchStartDist !== null) {
+        e.preventDefault()
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const currentDist = Math.hypot(dx, dy)
+        const diff = currentDist - touchStartDist
+        // 双指外张 (diff > 0) 为放大视角，摄像机逼近
+        zoomCamera(-diff * 0.05)
+        touchStartDist = currentDist
+      }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        touchStartDist = null
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+
     return () => {
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', handleResize)
+      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
       renderer.dispose()
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
     }
-  }, [])
+  }, [zoomCamera])
 
   // 2. 滑块参数调节（仅在用户真正调整滑块时才执行，绝不抹除手工形变）
   useEffect(() => {
@@ -488,6 +566,10 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         cameraRef.current.lookAt(0, 6.5, 0)
       }
     }
+    // 通用背景拖拽：在非泥胎区域拖拽，自由旋转陶轮与视角查看全貌
+    else if (activeHitYRef.current === null && turntableGroupRef.current) {
+      turntableGroupRef.current.rotation.y += deltaX * 0.012
+    }
   }
 
   const handlePointerUp = () => {
@@ -659,15 +741,19 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       )
       onToastRef.current?.('已复位泥料原始尺寸与形态')
     },
+    zoomCamera,
+    resetCamera,
   }))
 
   return (
     <div
+      ref={containerRef}
       className={`pottery-canvas-root ${isGlazingAnimation ? 'glazing-active' : ''}`}
       style={{
         position: 'relative',
         width: '100%',
         height: '100%',
+        touchAction: 'none',
         cursor:
           step === 'forming'
             ? isHoveringClay ? 'ew-resize' : 'grab'
@@ -680,7 +766,7 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={mountRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* 柴窑阶段：纯光晕氛围，无阻挡按钮 */}
       {step === 'fire' && (
@@ -689,14 +775,59 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         </div>
       )}
 
+      {/* 3D 视口缩放与视角控制悬浮窗 (右上角) */}
+      <div className="canvas-viewport-controls">
+        <button
+          type="button"
+          className="viewport-btn"
+          title="放大视点 (滚轮向前 / 触控板双指张开)"
+          onClick={(e) => {
+            e.stopPropagation()
+            zoomCamera(-3.0)
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="viewport-btn"
+          title="缩小视点 (滚轮向后 / 触控板双指捏合)"
+          onClick={(e) => {
+            e.stopPropagation()
+            zoomCamera(3.0)
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="viewport-btn"
+          title="复位默认视角与转盘"
+          onClick={(e) => {
+            e.stopPropagation()
+            resetCamera()
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+      </div>
+
       {/* 手势操作提示指示徽章 (底部居中) */}
       <div className="canvas-hint-tag">
-        {step === 'forming' && '✦ 鼠标在 3D 泥坯上左右拖拽拉坯，或通过左侧控制面板微调器型与尺寸'}
-        {step === 'trim' && '✦ 鼠标在器物表面平滑利坯修足，或点击左侧「利坯匀壁」「修整圈足」自动精修'}
-        {step === 'pattern' && '✦ 选用左侧传统纹样或矿物颜料调色盘，直接在 3D 瓶身涂画绘制！'}
-        {step === 'glaze' && '✦ 左侧切换 5 款真实透明琉璃罩釉：底色彩绘完好保留，仅变换釉面反光与质感'}
-        {step === 'fire' && `✦ 柴窑烧制中：当前窑温 ${firingTemp}°C · 1280°C 高温还原气氛熔融玻化成瓷`}
-        {step === 'finish' && '✦ 鼠标拖拽 3D 瓷器可 360° 自由旋转环视，左侧支持导出 3D 模型与中文证书海报'}
+        {step === 'forming' && '✦ 鼠标拖拽拉坯，空白处拖拽旋转 · 支持滚轮/双指缩放视角'}
+        {step === 'trim' && '✦ 鼠标平滑利坯修足，空白处拖拽旋转 · 支持滚轮/双指缩放视角'}
+        {step === 'pattern' && '✦ 在 3D 瓶身手绘涂画，空白处拖拽旋转瓶身 · 支持滚轮/双指缩放视角'}
+        {step === 'glaze' && '✦ 切换 5 款真实透明琉璃罩釉，空白处拖拽旋转 · 支持滚轮/双指缩放视角'}
+        {step === 'fire' && `✦ 柴窑烧制中：窑温 ${firingTemp}°C 熔融玻化 · 支持滚轮/双指缩放视角`}
+        {step === 'finish' && '✦ 拖拽 3D 瓷器 360° 旋转环视 · 支持滚轮/双指缩放视角'}
       </div>
     </div>
   )
