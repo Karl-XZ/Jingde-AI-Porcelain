@@ -1,0 +1,291 @@
+import * as THREE from 'three'
+import {
+  renderQinghuaMotif,
+  renderAICompositeMotif,
+  generateLangyaoCanvas,
+  generateHuayouCanvas,
+  generateChayemoCanvas,
+  type MotifType,
+} from './patterns'
+
+export type GlazeType = 'clay' | 'gloss' | 'jade' | 'matte' | 'crackle' | 'ripple' | 'qing' | 'lang' | 'hua' | 'cha'
+
+export class PotteryMaterialManager {
+  // 基础贴图画布 (承载用户手绘与青花纹样)
+  public canvas: HTMLCanvasElement
+  public ctx: CanvasRenderingContext2D
+  public texture: THREE.CanvasTexture
+
+  // 名釉专属高精物理材质贴图
+  public langyaoTexture: THREE.CanvasTexture
+  public huayouTexture: THREE.CanvasTexture
+  public chayemoTexture: THREE.CanvasTexture
+
+  // PBR 物理级材质
+  public material: THREE.MeshPhysicalMaterial
+  private currentGlaze: GlazeType = 'clay'
+  public currentMotif: MotifType = 'lotus'
+  public hasUserPainting = false
+
+  constructor(width = 1024, height = 1024) {
+    this.canvas = document.createElement('canvas')
+    this.canvas.width = width
+    this.canvas.height = height
+    const context = this.canvas.getContext('2d')
+    if (!context) throw new Error('Cannot get 2D context')
+    this.ctx = context
+
+    // 默认初始为陶土生坯泥料色
+    this.ctx.fillStyle = '#c79a6b'
+    this.ctx.fillRect(0, 0, width, height)
+
+    this.texture = new THREE.CanvasTexture(this.canvas)
+    this.texture.wrapS = THREE.RepeatWrapping
+    this.texture.wrapT = THREE.ClampToEdgeWrapping
+
+    // 预先生成景德镇国宝名釉的真实纹理贴图
+    const langCanvas = generateLangyaoCanvas(width, height)
+    this.langyaoTexture = new THREE.CanvasTexture(langCanvas)
+    this.langyaoTexture.wrapS = THREE.RepeatWrapping
+    this.langyaoTexture.wrapT = THREE.ClampToEdgeWrapping
+
+    const huaCanvas = generateHuayouCanvas(width, height)
+    this.huayouTexture = new THREE.CanvasTexture(huaCanvas)
+    this.huayouTexture.wrapS = THREE.RepeatWrapping
+    this.huayouTexture.wrapT = THREE.ClampToEdgeWrapping
+
+    const chaCanvas = generateChayemoCanvas(width, height)
+    this.chayemoTexture = new THREE.CanvasTexture(chaCanvas)
+    this.chayemoTexture.wrapS = THREE.RepeatWrapping
+    this.chayemoTexture.wrapT = THREE.ClampToEdgeWrapping
+
+    // 默认 PBR 物理材质
+    this.material = new THREE.MeshPhysicalMaterial({
+      color: 0xc79a6b,
+      roughness: 0.82,
+      metalness: 0.02,
+      clearcoat: 0.0,
+      clearcoatRoughness: 0.1,
+      side: THREE.DoubleSide,
+    })
+  }
+
+  /**
+   * 应用传统纹饰预设（缠枝莲、云水龙、冰裂梅、蕉叶纹、素白素胎）
+   */
+  public applyPattern(motif: MotifType = 'lotus') {
+    this.currentMotif = motif
+    renderQinghuaMotif(this.ctx, this.canvas.width, this.canvas.height, motif)
+    this.texture.needsUpdate = true
+    this.material.map = this.texture
+    this.material.color.setHex(0xffffff)
+    this.material.needsUpdate = true
+    this.hasUserPainting = false
+  }
+
+  /**
+   * AI 智能辅助构图：生成对称如意云肩与缠枝宝相花构图
+   */
+  public aiGeneratePattern() {
+    renderAICompositeMotif(this.ctx, this.canvas.width, this.canvas.height)
+    this.texture.needsUpdate = true
+    this.material.map = this.texture
+    this.material.color.setHex(0xffffff)
+    this.material.needsUpdate = true
+    this.hasUserPainting = true
+    this.currentMotif = 'lotus'
+  }
+
+  /**
+   * 清空白胎，方便用户 100% 自主手绘
+   */
+  public clearCanvas(color = '#f8f6f0') {
+    this.ctx.fillStyle = color
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+    this.texture.needsUpdate = true
+    this.material.map = this.texture
+    this.material.color.setHex(0xffffff)
+    this.material.needsUpdate = true
+    this.hasUserPainting = false
+    this.currentMotif = 'blank'
+  }
+
+  /**
+   * 在 3D 瓷瓶表面手绘上色或橡皮擦
+   * @param u UV横坐标 (0~1)
+   * @param v UV纵坐标 (0~1)
+   * @param brushSize 笔刷粗细
+   * @param color 矿物颜料色彩
+   * @param alpha 透明度 / 水墨浓淡
+   * @param isEraser 是否为橡皮擦
+   */
+  public paintAtUV(
+    u: number,
+    v: number,
+    brushSize = 12,
+    color = '#183e78',
+    alpha = 0.9,
+    isEraser = false
+  ) {
+    const x = u * this.canvas.width
+    // Three.js UV 中 v=0 为底，v=1 为顶；Canvas 中 y=0 为顶
+    const y = (1 - v) * this.canvas.height
+
+    this.ctx.save()
+
+    if (isEraser) {
+      // 橡皮擦：擦除回复白瓷胎骨底色
+      this.ctx.globalAlpha = 1.0
+      this.ctx.fillStyle = '#f8f6f0'
+      this.ctx.beginPath()
+      this.ctx.arc(x, y, brushSize * 1.5, 0, Math.PI * 2)
+      this.ctx.fill()
+    } else {
+      // 毛笔着色
+      this.ctx.globalAlpha = alpha
+      this.ctx.fillStyle = color
+      this.ctx.beginPath()
+      this.ctx.arc(x, y, brushSize, 0, Math.PI * 2)
+      this.ctx.fill()
+
+      // 水墨毛笔边缘晕染微渗透质感
+      this.ctx.globalAlpha = alpha * 0.35
+      this.ctx.beginPath()
+      this.ctx.arc(x, y, brushSize * 1.5, 0, Math.PI * 2)
+      this.ctx.fill()
+    }
+
+    this.ctx.restore()
+
+    this.hasUserPainting = true
+    this.texture.needsUpdate = true
+    this.material.map = this.texture
+    this.material.color.setHex(0xffffff)
+  }
+
+  /**
+   * 切换真实名贵罩釉质感与反光效果
+   * 核心准则：上釉过程不改变任何颜色（底色彩绘与手绘完全保留在透明罩釉层之下），但全面改变表面粗糙度、清漆厚度、折射与镜面高光反光质感！
+   */
+  public setGlaze(glaze: GlazeType, isFired = false) {
+    this.currentGlaze = glaze
+
+    if (glaze === 'clay') {
+      // 生坯 / 修型素胎阶段：陶土泥巴质感，无任何罩釉
+      this.material.map = null
+      this.material.color.setHex(0xc79a6b)
+      this.material.roughness = isFired ? 0.65 : 0.88
+      this.material.metalness = 0.01
+      this.material.clearcoat = 0.0
+      this.material.clearcoatRoughness = 0.5
+      this.material.needsUpdate = true
+      return
+    }
+
+    // 核心准则：进入纹样/施釉/成品阶段，贴图始终为包含用户手绘与纹样的 this.texture，绝不破坏覆盖颜色！
+    this.material.map = this.texture
+    this.material.color.setHex(0xffffff)
+
+    // 调节表面物理质感、高光反射强度、粗糙度与清漆折射
+    switch (glaze) {
+      case 'gloss':
+      case 'qing':
+      default:
+        // 【高光玻璃透明釉】景德镇御窑最经典的青花高光透明罩釉
+        // 质感：晶莹剔透，纯澈明镜，反光强烈锐利
+        this.material.roughness = isFired ? 0.03 : 0.28
+        this.material.metalness = 0.01
+        this.material.clearcoat = isFired ? 1.0 : 0.75
+        this.material.clearcoatRoughness = isFired ? 0.02 : 0.08
+        this.material.ior = 1.54
+        break
+
+      case 'jade':
+        // 【温润凝脂釉】永乐甜白与羊脂白玉质感
+        // 质感：柔光漫反射，高光内敛温润，抚之如凝脂
+        this.material.roughness = isFired ? 0.22 : 0.44
+        this.material.metalness = 0.02
+        this.material.clearcoat = isFired ? 0.65 : 0.45
+        this.material.clearcoatRoughness = isFired ? 0.18 : 0.26
+        this.material.ior = 1.48
+        break
+
+      case 'matte':
+      case 'cha':
+        // 【丝绸哑光釉】类似定窑、茶叶末微晶析出的哑光丝绢质感
+        // 质感：无刺眼浮光，极低反光，呈现柔润细腻的丝绸缎面光泽
+        this.material.roughness = isFired ? 0.55 : 0.72
+        this.material.metalness = 0.03
+        this.material.clearcoat = isFired ? 0.10 : 0.04
+        this.material.clearcoatRoughness = isFired ? 0.42 : 0.52
+        this.material.ior = 1.42
+        break
+
+      case 'crackle':
+        // 【冰裂开片釉】哥窑冰裂断纹折射
+        // 质感：通透罩釉，底层彩绘完好透出，釉面高光反射带有冰裂开片折光
+        this.material.roughness = isFired ? 0.08 : 0.32
+        this.material.metalness = 0.03
+        this.material.clearcoat = isFired ? 0.95 : 0.68
+        this.material.clearcoatRoughness = isFired ? 0.06 : 0.12
+        this.material.ior = 1.56
+        break
+
+      case 'ripple':
+      case 'hua':
+      case 'lang':
+        // 【柴窑水光釉】景德镇马鞍镇窑松柴烧成特有的水波微澜、橘皮微光起伏
+        // 质感：侧光下呈现波光粼粼的微波反光，古法手工韵味浓郁
+        this.material.roughness = isFired ? 0.14 : 0.36
+        this.material.metalness = 0.03
+        this.material.clearcoat = isFired ? 0.88 : 0.58
+        this.material.clearcoatRoughness = isFired ? 0.14 : 0.22
+        this.material.ior = 1.52
+        break
+    }
+
+    this.material.needsUpdate = true
+  }
+
+  /**
+   * 动态微调施釉厚度 (0.4 ~ 1.6)
+   */
+  public setGlazeThickness(factor: number) {
+    const clamped = Math.max(0.4, Math.min(1.6, factor))
+    this.material.clearcoat = Math.min(1.0, this.material.clearcoat * clamped)
+    this.material.needsUpdate = true
+  }
+
+  /**
+   * 动态微调釉面反光光泽度 (0.05 ~ 1.0)
+   */
+  public setGlazeGloss(gloss: number) {
+    const clamped = Math.max(0.05, Math.min(1.0, gloss))
+    this.material.roughness = (1 - clamped) * 0.58 + 0.02
+    this.material.clearcoatRoughness = (1 - clamped) * 0.3 + 0.01
+    this.material.needsUpdate = true
+  }
+
+  /**
+   * 烧制动态温控过渡 (0 = 常温生坯, 1 = 1280°C 熔融成瓷)
+   */
+  public updateFiringProgress(progress: number) {
+    const p = Math.max(0, Math.min(1, progress))
+    if (this.currentGlaze === 'clay') {
+      this.material.roughness = 0.85 - p * 0.2
+      this.material.clearcoat = p * 0.3
+    } else if (this.currentGlaze === 'matte' || this.currentGlaze === 'cha') {
+      this.material.roughness = 0.68 - p * 0.13
+      this.material.clearcoat = p * 0.12
+    } else {
+      // 釉面逐渐玻化熔融，清漆镜面高光浮现
+      this.material.roughness = 0.45 - p * 0.41
+      this.material.clearcoat = p * 1.0
+      this.material.clearcoatRoughness = 0.22 - p * 0.20
+    }
+  }
+
+  public getGlaze(): GlazeType {
+    return this.currentGlaze
+  }
+}

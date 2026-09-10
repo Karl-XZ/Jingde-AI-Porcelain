@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&display=swap');
+
+:root {
+  /* 核心色板 - 景德镇传统色（沿用西兰卡普 Art Deco 暗色体系） */
+  --charcoal: #191613;          /* 墨灰 */
+  --charcoal-deep: #0e0c0a;
+  --ivory: #f3ecdc;             /* 米白 */
+  --ivory-warm: #e8dfca;
+  --indigo: #2f6aa9;            /* 青花蓝 */
+  --indigo-deep: #1c4570;
+  --indigo-bright: #4a8fcf;
+  --ochre: #e8743b;             /* 窑火橙 */
+  --ochre-light: #f6914f;
+  --ochre-deep: #c4521f;
+  --gold-brown: #8b6914;
+  --gold-light: #c9a24f;        /* 金 */
+  --clay: #b07f4f;              /* 陶土棕 */
+  --clay-deep: #8a5d34;
+  --clay-light: #c79a6b;
+  --warm-gray: #6b635b;
+  --cool-gray: #4a4a52;
+
+  /* 纹样 / 釉色专用 */
+  --glaze-red: #a63d40;        /* 郎红 */
+  --glaze-blue: #1c4570;        /* 青花 */
+  --glaze-green: #3d5a3d;       /* 茶叶末绿 */
+
+  /* 字体 */
+  --font-display: 'ZCOOL XiaoWei', serif;
+  --font-brush: 'Ma Shan Zheng', cursive;
+  --font-body: 'Noto Serif SC', serif;
+
+  /* 间距 */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  /* 阴影 */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 40px rgba(232, 116, 59, 0.15);
+  --shadow-deep: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--charcoal-deep);
+  color: var(--ivory);
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root { height: 100vh; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--charcoal-deep); }
+::-webkit-scrollbar-thumb { background: var(--warm-gray); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ochre); }
+
+/* 动画 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.85; } }
+@keyframes flicker {
+  0%, 100% { opacity: 0.85; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.12); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin360 { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+
+.animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+.animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
