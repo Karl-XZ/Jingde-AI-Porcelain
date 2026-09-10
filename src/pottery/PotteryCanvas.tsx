@@ -405,31 +405,96 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     }
   }, [activeMotif])
 
-  // 4. 工艺阶段切换（保护用户器型与手绘纹样，绝不强制覆盖重置）
+  // 4. 柴窑烧制升温控制 (支持任意目标温度与强还原焰动态热力光晕)
+  const firingIntervalRef = useRef<number | null>(null)
+  const firingTimeoutRef = useRef<number | null>(null)
+
+  const triggerFiring = useCallback((targetTemp = 1280) => {
+    if (firingIntervalRef.current) {
+      clearInterval(firingIntervalRef.current)
+      firingIntervalRef.current = null
+    }
+    setIsFiringActive(true)
+    onFiringProgressRef.current?.(25, true)
+    onToastRef.current?.('松柴入窑点火！窑温自 25°C 稳步攀升，强还原气氛演化中…')
+
+    let temp = 25
+    const totalFrames = 36
+    const stepDelta = (targetTemp - 25) / totalFrames
+
+    firingIntervalRef.current = window.setInterval(() => {
+      temp += stepDelta
+      if (temp >= targetTemp) {
+        temp = targetTemp
+        if (firingIntervalRef.current) {
+          clearInterval(firingIntervalRef.current)
+          firingIntervalRef.current = null
+        }
+        setIsFiringActive(false)
+        setFiringTemp(targetTemp)
+        onFiringProgressRef.current?.(targetTemp, false)
+        onToastRef.current?.(`窑温已达 ${targetTemp}°C！强还原气氛定色，釉层完全熔融玻化，成瓷通红！`)
+        if (kilnFireLightRef.current) {
+          kilnFireLightRef.current.intensity = 3.6
+        }
+        matManagerRef.current?.updateFiringProgress(1.0, targetTemp)
+      } else {
+        const roundedTemp = Math.round(temp)
+        setFiringTemp(roundedTemp)
+        onFiringProgressRef.current?.(roundedTemp, true)
+        const progress = (temp - 25) / (targetTemp - 25)
+        matManagerRef.current?.updateFiringProgress(progress, roundedTemp)
+        if (kilnFireLightRef.current) {
+          kilnFireLightRef.current.intensity = 1.0 + 2.6 * progress
+        }
+      }
+    }, 60)
+  }, [])
+
+  // 5. 工艺阶段切换（保护用户器型与手绘纹样，并在进入烧制阶段时自动执行升温演化）
   useEffect(() => {
     const matManager = matManagerRef.current
     const kilnLight = kilnFireLightRef.current
     if (!matManager) return
 
+    // 如果离开烧制阶段，清理未完成的升温计时器
+    if (step !== 'fire') {
+      if (firingIntervalRef.current) {
+        clearInterval(firingIntervalRef.current)
+        firingIntervalRef.current = null
+      }
+      if (firingTimeoutRef.current) {
+        clearTimeout(firingTimeoutRef.current)
+        firingTimeoutRef.current = null
+      }
+      setIsFiringActive(false)
+    }
+
     if (step === 'forming' || step === 'trim') {
       matManager.setGlaze('clay', false)
       if (kilnLight) kilnLight.intensity = 0
     } else if (step === 'pattern') {
-      // 保持当前手绘或纹饰，不作无端覆盖重置
       matManager.setGlaze('qing', false)
       if (kilnLight) kilnLight.intensity = 0
       if (turntableGroupRef.current) {
         turntableGroupRef.current.rotation.y = 0
       }
     } else if (step === 'glaze') {
-      // 根据用户选择的名釉切换真实材质贴图与厚度光泽
       matManager.setGlaze(activeGlaze, false)
       matManager.setGlazeThickness(glazeThickness)
       matManager.setGlazeGloss(glazeGloss)
       if (kilnLight) kilnLight.intensity = 0
     } else if (step === 'fire') {
-      if (kilnLight) kilnLight.intensity = 3.5
-      matManager.updateFiringProgress(1.0, 1300)
+      // 初次/每次进入烧制工序：先置于常温状态（25°C，呈现未受热自然釉色）
+      matManager.updateFiringProgress(0.0, 25)
+      if (kilnLight) kilnLight.intensity = 0.6
+      setFiringTemp(25)
+      onFiringProgressRef.current?.(25, false)
+
+      // 稍作停顿（450ms 让用户看清常温入窑初态），随后自动演化升温至 1280°C 通红状态
+      firingTimeoutRef.current = window.setTimeout(() => {
+        triggerFiring(1280)
+      }, 450)
     } else if (step === 'finish') {
       if (kilnLight) kilnLight.intensity = 0
       matManager.setGlaze(activeGlaze, true)
@@ -437,40 +502,14 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         turntableGroupRef.current.rotation.y = 0
       }
     }
-  }, [step, activeGlaze, glazeThickness, glazeGloss])
 
-  // 4. 柴窑烧制升温控制 (支持任意目标温度与强还原焰动态热力光晕)
-  const triggerFiring = useCallback((targetTemp = 1280) => {
-    if (isFiringActive) return
-    setIsFiringActive(true)
-    onFiringProgressRef.current?.(25, true)
-    onToastRef.current?.('点火升温！柴窑松柴强还原焰闭窑烧制中…')
-
-    let temp = 25
-    const stepDelta = Math.max(20, Math.round((targetTemp - 25) / 28))
-    const interval = window.setInterval(() => {
-      temp += stepDelta
-      if (temp >= targetTemp) {
-        temp = targetTemp
-        clearInterval(interval)
-        setIsFiringActive(false)
-        onFiringProgressRef.current?.(targetTemp, false)
-        onToastRef.current?.(`窑温已达 ${targetTemp}°C！强还原气氛定色，釉层完全熔融玻化，开窑大吉！`)
-        if (kilnFireLightRef.current) {
-          kilnFireLightRef.current.intensity = 3.6
-        }
-      } else {
-        onFiringProgressRef.current?.(temp, true)
-        if (kilnFireLightRef.current) {
-          const ratio = (temp - 25) / (targetTemp - 25)
-          kilnFireLightRef.current.intensity = 1.5 + 2.4 * ratio
-        }
+    return () => {
+      if (firingTimeoutRef.current) {
+        clearTimeout(firingTimeoutRef.current)
+        firingTimeoutRef.current = null
       }
-      setFiringTemp(temp)
-      const progress = (temp - 25) / (targetTemp - 25)
-      matManagerRef.current?.updateFiringProgress(progress, temp)
-    }, 50)
-  }, [isFiringActive])
+    }
+  }, [step, activeGlaze, glazeThickness, glazeGloss, triggerFiring])
 
   // 5. 鼠标拉坯形变、利坯修型与 3D 自由手绘上色
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -826,7 +865,7 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
         {step === 'trim' && '✦ 鼠标平滑利坯修足，空白处拖拽旋转 · 支持滚轮/双指缩放视角'}
         {step === 'pattern' && '✦ 在 3D 瓶身手绘涂画，空白处拖拽旋转瓶身 · 支持滚轮/双指缩放视角'}
         {step === 'glaze' && '✦ 切换 5 款真实透明琉璃罩釉，空白处拖拽旋转 · 支持滚轮/双指缩放视角'}
-        {step === 'fire' && `✦ 柴窑烧制中：窑温 ${firingTemp}°C 熔融玻化 · 支持滚轮/双指缩放视角`}
+        {step === 'fire' && (isFiringActive ? `✦ 柴窑升温烧制中：当前窑温 ${firingTemp}°C 强还原焰熔融玻化…` : `✦ 柴窑烧制完成：窑温 ${firingTemp}°C 强还原定色成瓷 · 支持滚轮/双指缩放`)}
         {step === 'finish' && '✦ 拖拽 3D 瓷器 360° 旋转环视 · 支持滚轮/双指缩放视角'}
       </div>
     </div>
