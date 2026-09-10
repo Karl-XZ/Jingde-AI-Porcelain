@@ -23,14 +23,22 @@ class MasterMentorAgent(BaseJiuwenAgent):
       // 若 type 为 update_shape:
       // "heightScale": 0.8~1.4, "rimScale": 0.6~1.6, "bellyScale": 0.7~1.6
       // 若 type 为 apply_motif:
-      // "motif": "lotus" | "dragon" | "ice" | "banana" | "fish"
+      // "motif": "lotus" | "dragon" | "ice" | "banana" | "fish" | "plum"
       // 若 type 为 update_glaze:
       // "glaze": "gloss" | "jade" | "matte" | "crackle" | "ripple"
     }
   }
 }
 ```
-注意：如果用户只是单纯提问工艺历史或闲聊，action.type 设置为 "none"，payload 为空对象。若用户有改动瓷器的口语要求，必须准确给出对应的 action。"""
+注意：
+1. 若用户提出改动瓷器的口语要求，必须准确给出对应的 action：
+   - 包含“梅花”、“画梅”、“折枝梅”、“寒梅”等要求，必须返回 action.type="apply_motif", payload.motif="plum"；
+   - 包含“龙”、“云水龙”、“苍龙”等要求，必须返回 action.type="apply_motif", payload.motif="dragon"；
+   - 包含“莲花”、“缠枝莲”、“宝相花”等要求，必须返回 action.type="apply_motif", payload.motif="lotus"；
+   - 包含“鱼”、“游鱼”、“鱼藻”等要求，必须返回 action.type="apply_motif", payload.motif="fish"；
+   - 包含“冰裂”、“哥窑”等要求，必须返回 action.type="apply_motif", payload.motif="ice"；
+   - 包含“蕉叶”、“如意纹”等要求，必须返回 action.type="apply_motif", payload.motif="banana"。
+2. 如果用户只是单纯提问工艺历史或闲聊，action.type 设置为 "none"，payload 为空对象。"""
 
     def __init__(self):
         super().__init__(

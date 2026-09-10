@@ -475,6 +475,9 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       if (kilnLight) kilnLight.intensity = 0
     } else if (step === 'pattern') {
       matManager.setGlaze('qing', false)
+      if (!matManager.hasUserPainting) {
+        matManager.applyPattern(activeMotif || 'lotus')
+      }
       if (kilnLight) kilnLight.intensity = 0
       if (turntableGroupRef.current) {
         turntableGroupRef.current.rotation.y = 0

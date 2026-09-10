@@ -142,10 +142,28 @@ export class PotteryMaterialManager {
   }
 
   /**
+  /**
     * 应用 DeepSeek 生成的 SVG 矢量青花/彩绘代码 (圆周无缝连续映射)
    */
   public applySvgCode(svgCode: string) {
-    const blob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' })
+    if (!svgCode || !svgCode.includes('<svg')) return
+
+    // 清洗并规范化 SVG 代码
+    let cleanSvg = svgCode.trim()
+    cleanSvg = cleanSvg.replace(/^```(?:xml|svg)?/i, '').replace(/```$/, '').trim()
+
+    // 补齐 xmlns 与 viewBox 属性，确保浏览器 Image 对象 100% 能够解析渲染
+    if (!cleanSvg.includes('xmlns=')) {
+      cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+    }
+    if (!cleanSvg.includes('viewBox=')) {
+      cleanSvg = cleanSvg.replace('<svg', '<svg viewBox="0 0 1024 1024"')
+    }
+    if (!cleanSvg.includes('width=')) {
+      cleanSvg = cleanSvg.replace('<svg', '<svg width="1024" height="1024"')
+    }
+
+    const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const img = new Image()
     img.onload = () => {
@@ -154,8 +172,6 @@ export class PotteryMaterialManager {
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
 
       // 2. 将正统青花大作按圆周环形映射
-      // 几何体坐标系中 u=0.5 (正中) 朝向正面摄像机，u=0/1 位于背面闭合处：
-      // SVG 中心主纹将直接迎面呈现于 3D 瓷瓶正前方，四周连绵环抱，绝无横向挤压变形！
       this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height)
 
       this.texture.needsUpdate = true
@@ -163,6 +179,10 @@ export class PotteryMaterialManager {
       this.material.color.setHex(0xffffff)
       this.material.needsUpdate = true
       this.hasUserPainting = true
+      URL.revokeObjectURL(url)
+    }
+    img.onerror = (err) => {
+      console.warn('[PotteryMaterials] SVG image render error:', err)
       URL.revokeObjectURL(url)
     }
     img.src = url

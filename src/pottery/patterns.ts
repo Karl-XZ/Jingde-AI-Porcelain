@@ -4,7 +4,7 @@
  * 以及国宝级名釉：郎窑红（脱口出筋、牛毛细片）、窑变花釉（紫蓝流淌）、茶叶末结晶釉（黄金微晶斑）
  */
 
-export type MotifType = 'lotus' | 'dragon' | 'ice' | 'banana' | 'blank' | 'fish'
+export type MotifType = 'lotus' | 'dragon' | 'ice' | 'banana' | 'blank' | 'fish' | 'plum'
 
 // 7 款景德镇经典矿物颜料
 export const PALETTE_COLORS = [
@@ -148,6 +148,9 @@ export function renderQinghuaMotif(
       const wx = (i * width) / 10 + 35
       drawWaterWeed(ctx, wx, height * 0.68, deepCobalt, lightCobalt)
     }
+  } else if (motif === 'plum') {
+    // 景德镇御窑明永宣青花折枝寒梅图 (Imperial Prunus Mume)
+    drawPlumBranchAndBlossoms(ctx, width, height, deepCobalt, cobaltBlue, lightCobalt)
   }
 
   // 4. 圈足饰带：仰莲瓣纹 (Lotus Petal Base)
@@ -433,6 +436,224 @@ function drawPlumBlossom(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   ctx.fillStyle = '#ffd700'
   ctx.beginPath()
   ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/**
+ * 绘制明代御窑青花折枝寒梅图 (古雅老干、疏影横斜、五瓣暗香)
+ */
+function drawPlumBranchAndBlossoms(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  deepCobalt: string,
+  cobaltBlue: string,
+  lightCobalt: string
+) {
+  ctx.save()
+
+  // 1. 苍劲老干主枝 (四方连续曲折横斜，骨法用笔)
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  // 主干老枝
+  ctx.beginPath()
+  ctx.strokeStyle = deepCobalt
+  ctx.lineWidth = 14
+  ctx.moveTo(0, height * 0.58)
+  ctx.bezierCurveTo(width * 0.12, height * 0.46, width * 0.22, height * 0.65, width * 0.38, height * 0.50)
+  ctx.bezierCurveTo(width * 0.52, height * 0.38, width * 0.65, height * 0.62, width * 0.82, height * 0.44)
+  ctx.bezierCurveTo(width * 0.92, height * 0.35, width * 0.98, height * 0.52, width, height * 0.58)
+  ctx.stroke()
+
+  // 飞白与分水皴擦 (干裂秋风、润含春雨)
+  ctx.beginPath()
+  ctx.strokeStyle = cobaltBlue
+  ctx.lineWidth = 8
+  ctx.moveTo(0, height * 0.58)
+  ctx.bezierCurveTo(width * 0.12, height * 0.46, width * 0.22, height * 0.65, width * 0.38, height * 0.50)
+  ctx.bezierCurveTo(width * 0.52, height * 0.38, width * 0.65, height * 0.62, width * 0.82, height * 0.44)
+  ctx.bezierCurveTo(width * 0.92, height * 0.35, width * 0.98, height * 0.52, width, height * 0.58)
+  ctx.stroke()
+
+  // 2. 向上挺秀探出的新枝与侧枝 (如铁画银钩)
+  const twigs = [
+    { x1: width * 0.18, y1: height * 0.54, x2: width * 0.15, y2: height * 0.36, cx: width * 0.16, cy: height * 0.42 },
+    { x1: width * 0.28, y1: height * 0.58, x2: width * 0.32, y2: height * 0.72, cx: width * 0.31, cy: height * 0.66 },
+    { x1: width * 0.42, y1: height * 0.47, x2: width * 0.50, y2: height * 0.32, cx: width * 0.48, cy: height * 0.38 },
+    { x1: width * 0.58, y1: height * 0.48, x2: width * 0.56, y2: height * 0.68, cx: width * 0.59, cy: height * 0.60 },
+    { x1: width * 0.72, y1: height * 0.52, x2: width * 0.68, y2: height * 0.34, cx: width * 0.73, cy: height * 0.40 },
+    { x1: width * 0.86, y1: height * 0.43, x2: width * 0.92, y2: height * 0.30, cx: width * 0.90, cy: height * 0.35 },
+    { x1: width * 0.05, y1: height * 0.56, x2: width * 0.02, y2: height * 0.40, cx: width * 0.03, cy: height * 0.46 },
+    { x1: width * 0.96, y1: height * 0.53, x2: width * 0.99, y2: height * 0.40, cx: width * 0.98, cy: height * 0.45 },
+  ]
+
+  twigs.forEach((t) => {
+    ctx.beginPath()
+    ctx.strokeStyle = deepCobalt
+    ctx.lineWidth = 4.5
+    ctx.moveTo(t.x1, t.y1)
+    ctx.quadraticCurveTo(t.cx, t.cy, t.x2, t.y2)
+    ctx.stroke()
+  })
+
+  // 3. 散落盛开与含苞的御窑青花五瓣梅花
+  const blossoms = [
+    // 正面主花 (x ~ 512 附近迎面盛开)
+    { x: width * 0.50, y: height * 0.32, size: 42, angle: 0.1 },
+    { x: width * 0.44, y: height * 0.46, size: 36, angle: 0.8 },
+    { x: width * 0.56, y: height * 0.68, size: 38, angle: 1.5 },
+    // 侧翼与两翼群花
+    { x: width * 0.15, y: height * 0.36, size: 40, angle: 0.3 },
+    { x: width * 0.22, y: height * 0.62, size: 32, angle: 2.1 },
+    { x: width * 0.32, y: height * 0.72, size: 34, angle: 1.2 },
+    { x: width * 0.36, y: height * 0.51, size: 38, angle: 0.5 },
+    { x: width * 0.68, y: height * 0.34, size: 42, angle: 2.7 },
+    { x: width * 0.76, y: height * 0.48, size: 34, angle: 1.9 },
+    { x: width * 0.84, y: height * 0.62, size: 30, angle: 0.9 },
+    { x: width * 0.92, y: height * 0.30, size: 38, angle: 0.2 },
+    { x: width * 0.06, y: height * 0.42, size: 36, angle: 1.7 },
+    { x: width * 0.98, y: height * 0.42, size: 36, angle: 1.7 },
+  ]
+
+  blossoms.forEach((b) => {
+    drawRefinedPlumFlower(ctx, b.x, b.y, b.size, b.angle, deepCobalt, cobaltBlue, lightCobalt)
+  })
+
+  // 4. 含苞待放的花蕾与萼片
+  const buds = [
+    { x: width * 0.12, y: height * 0.33, r: 8 },
+    { x: width * 0.18, y: height * 0.48, r: 7 },
+    { x: width * 0.47, y: height * 0.28, r: 9 },
+    { x: width * 0.63, y: height * 0.55, r: 8 },
+    { x: width * 0.73, y: height * 0.30, r: 9 },
+    { x: width * 0.89, y: height * 0.28, r: 8 },
+  ]
+
+  buds.forEach((bud) => {
+    ctx.save()
+    ctx.translate(bud.x, bud.y)
+    // 萼片
+    ctx.fillStyle = deepCobalt
+    ctx.beginPath()
+    ctx.arc(0, 4, bud.r * 0.8, 0, Math.PI)
+    ctx.fill()
+    // 花苞
+    ctx.fillStyle = cobaltBlue
+    ctx.beginPath()
+    ctx.arc(0, 0, bud.r, Math.PI, 0)
+    ctx.fill()
+    ctx.strokeStyle = deepCobalt
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+    ctx.restore()
+  })
+
+  // 5. 随风轻拂的飘落花瓣 (暗香浮动)
+  const fallingPetals = [
+    { x: width * 0.25, y: height * 0.42, rot: 0.8 },
+    { x: width * 0.39, y: height * 0.63, rot: 2.2 },
+    { x: width * 0.55, y: height * 0.40, rot: 1.3 },
+    { x: width * 0.62, y: height * 0.72, rot: 0.5 },
+    { x: width * 0.80, y: height * 0.38, rot: 2.8 },
+  ]
+
+  fallingPetals.forEach((p) => {
+    ctx.save()
+    ctx.translate(p.x, p.y)
+    ctx.rotate(p.rot)
+    ctx.beginPath()
+    ctx.ellipse(0, 0, 10, 6, 0, 0, Math.PI * 2)
+    ctx.fillStyle = lightCobalt
+    ctx.fill()
+    ctx.strokeStyle = deepCobalt
+    ctx.lineWidth = 1.6
+    ctx.stroke()
+    ctx.restore()
+  })
+
+  ctx.restore()
+}
+
+/**
+ * 绘制单朵精雅五瓣青花梅花 (分水渐变、铁线勾线、珍珠花蕊)
+ */
+function drawRefinedPlumFlower(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  rotation: number,
+  deepCobalt: string,
+  cobaltBlue: string,
+  lightCobalt: string
+) {
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate(rotation)
+
+  const petalRadius = size * 0.45
+  const petalDist = size * 0.55
+
+  // 1. 五枚圆浑饱满花瓣 (五瓣疏朗)
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2 - Math.PI / 2
+    const px = Math.cos(angle) * petalDist
+    const py = Math.sin(angle) * petalDist
+
+    ctx.save()
+    // 花瓣分水晕染
+    ctx.beginPath()
+    ctx.arc(px, py, petalRadius, 0, Math.PI * 2)
+    ctx.fillStyle = lightCobalt
+    ctx.fill()
+
+    // 花瓣心部深色微晕
+    ctx.beginPath()
+    ctx.arc(px * 0.6, py * 0.6, petalRadius * 0.6, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(20, 59, 117, 0.45)'
+    ctx.fill()
+
+    // 铁线描外轮廓
+    ctx.strokeStyle = deepCobalt
+    ctx.lineWidth = 2.2
+    ctx.beginPath()
+    ctx.arc(px, py, petalRadius, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // 2. 花心点蕊 (放射状花丝与金色/浓蓝花粉点)
+  for (let j = 0; j < 10; j++) {
+    const stamenAngle = (j / 10) * Math.PI * 2
+    const sx = Math.cos(stamenAngle) * (size * 0.32)
+    const sy = Math.sin(stamenAngle) * (size * 0.32)
+
+    // 花丝
+    ctx.beginPath()
+    ctx.moveTo(0, 0)
+    ctx.lineTo(sx, sy)
+    ctx.strokeStyle = cobaltBlue
+    ctx.lineWidth = 1.2
+    ctx.stroke()
+
+    // 花药
+    ctx.beginPath()
+    ctx.arc(sx, sy, 2.2, 0, Math.PI * 2)
+    ctx.fillStyle = j % 2 === 0 ? '#c9a24f' : deepCobalt
+    ctx.fill()
+  }
+
+  // 核心花蕊
+  ctx.beginPath()
+  ctx.arc(0, 0, size * 0.16, 0, Math.PI * 2)
+  ctx.fillStyle = deepCobalt
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(0, 0, size * 0.08, 0, Math.PI * 2)
+  ctx.fillStyle = '#c9a24f'
   ctx.fill()
 
   ctx.restore()

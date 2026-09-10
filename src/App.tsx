@@ -59,6 +59,7 @@ const MOTIF_LIST: MotifDef[] = [
   { id: 'dragon', name: '御窑云水龙', desc: '苍龙破雾穿云 · 气势磅礴', tag: '御窑' },
   { id: 'ice', name: '冰裂散点梅', desc: '哥窑断纹折光 · 疏影横斜', tag: '雅致' },
   { id: 'banana', name: '蕉叶如意纹', desc: '商周青铜变体 · 典雅端庄', tag: '古朴' },
+  { id: 'plum', name: '青花折枝梅', desc: '岁寒疏影横斜 · 暗香冷艳', tag: '名作' },
   { id: 'fish', name: '鱼藻清漪图', desc: '游鱼相戏水藻 · 悠然灵动', tag: '文人' },
   { id: 'blank', name: '纯白素瓷胎', desc: '羊脂素胎留白 · 自由手绘', tag: '自主' },
 ]
@@ -185,8 +186,14 @@ interface Msg { role: 'ai' | 'me'; html: string }
 
 export default function App() {
   function initStep(): StepKey {
-    const p = new URLSearchParams(location.search).get('step')
-    return p && STEPS.some((s) => s.key === p) ? (p as StepKey) : 'forming'
+    const raw = new URLSearchParams(location.search).get('step')?.toLowerCase()
+    if (!raw) return 'forming'
+    if (raw === 'motif' || raw === 'pattern' || raw === '3') return 'pattern'
+    if (raw === 'trim' || raw === '2') return 'trim'
+    if (raw === 'glaze' || raw === '4') return 'glaze'
+    if (raw === 'fire' || raw === '5') return 'fire'
+    if (raw === 'finish' || raw === '6') return 'finish'
+    return STEPS.some((s) => s.key === raw) ? (raw as StepKey) : 'forming'
   }
   const INIT_STEP = initStep()
   const hasUrlParams = Boolean(new URLSearchParams(location.search).get('step'))
@@ -317,11 +324,39 @@ export default function App() {
       if (act.payload.rimScale) setRimScale(Number(act.payload.rimScale))
       if (act.payload.bellyScale) setBellyScale(Number(act.payload.bellyScale))
       toast('✦ 导师已口语联动调整器型比例')
-    } else if (act.type === 'apply_motif' && act.payload?.motif) {
-      const m = act.payload.motif as MotifType
+    } else if (act.type === 'apply_motif' && act.payload) {
+      const raw = String(act.payload.motif || act.payload.theme || '').toLowerCase()
+      let m: MotifType = 'lotus'
+      if (raw.includes('plum') || raw.includes('梅')) m = 'plum'
+      else if (raw.includes('dragon') || raw.includes('龙')) m = 'dragon'
+      else if (raw.includes('fish') || raw.includes('鱼')) m = 'fish'
+      else if (raw.includes('ice') || raw.includes('裂') || raw.includes('哥窑')) m = 'ice'
+      else if (raw.includes('banana') || raw.includes('蕉')) m = 'banana'
+      else if (raw.includes('blank') || raw.includes('白') || raw.includes('素')) m = 'blank'
+      else if (raw.includes('lotus') || raw.includes('莲') || raw.includes('宝相')) m = 'lotus'
+      else if (raw.includes('花')) m = 'plum'
+      
       setActiveMotif(m)
       canvasRef.current?.applyMotif(m)
-      toast(`✦ 导师已为您绘制【${m}】青花纹饰`)
+      if (curStep === 'forming' || curStep === 'trim') {
+        setCurStep('pattern')
+      }
+      const nameMap: Record<MotifType, string> = {
+        lotus: '青花缠枝莲',
+        dragon: '御窑云水龙',
+        plum: '青花折枝梅',
+        fish: '鱼藻清漪图',
+        ice: '冰裂散点梅',
+        banana: '蕉叶如意纹',
+        blank: '纯白素瓷胎',
+      }
+      toast(`✦ 导师已为您绘制【${nameMap[m] || m}】青花纹饰`)
+    } else if (act.type === 'generate_svg' && act.payload) {
+      if (curStep === 'forming' || curStep === 'trim') {
+        setCurStep('pattern')
+      }
+      const theme = String(act.payload.theme || act.payload.motif || '梅花')
+      handleGenerateSvg(theme)
     } else if (act.type === 'update_glaze' && act.payload?.glaze) {
       const g = act.payload.glaze as GlazeType
       setActiveGlaze(g)
@@ -934,6 +969,13 @@ export default function App() {
                   onClick={() => handleGenerateSvg('青花缠枝宝相花纹', 'lotus')}
                 >
                   ✦ SVG 矢量生图：缠枝宝相花
+                </button>
+                <button
+                  className="ai-chip-btn"
+                  disabled={isGeneratingSvg}
+                  onClick={() => handleGenerateSvg('御窑青花折枝寒梅纹', 'plum')}
+                >
+                  ✦ SVG 矢量生图：青花折枝梅
                 </button>
                 <button
                   className="ai-chip-btn"

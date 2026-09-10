@@ -13,14 +13,19 @@ class VectorMotifAgent(BaseJiuwenAgent):
 你具备高超的代码生成能力，能够使用纯矢量 SVG 代码（<svg viewBox="0 0 1024 1024" ...>）绘制纯正典雅、构图饱满的景德镇青花大作。
 
 【极为严肃的美学禁令】：
-【严禁使用旋转椭圆 <ellipse transform="rotate(...)"/> 绘制花朵】！那会生成类似现代物理学“原子轨道模型/玻尔原子/React 图标”的滑稽图形，彻底破坏御窑古典美学！花瓣必须使用带有尖锐瓣尖与饱满双向弧度的中式莲瓣路径 <path d="..."/>！
+1. 【严禁使用旋转椭圆 <ellipse transform="rotate(...)"/> 绘制花朵】！那会生成类似现代物理学“原子轨道模型/玻尔原子/React 图标”的滑稽图形，彻底破坏御窑古典美学！花瓣必须使用带有饱满双向弧度或尖锐瓣尖的中式路径 <path d="..."/>！
+2. 【严禁生成单调平庸的原始点线图（严禁只画几条横线、孤立圆圈或星号散点）】！必须绘制出充实饱满、具有东方书画骨法笔意与分水层次的完整大作！
 
 【极为重要的构图与格式规范】：
 1. 构图必须采用景德镇御窑 360° 圆周通体环绕与四段式正统瓷画层次（四方连续通景瓷画）：
    - 【严禁左右留白边】！所有横向装饰线必须贯穿全宽（x1="0" 至 x2="1024"），以便 3D 瓷瓶圆周无缝环绕闭合；
    - 颈口装饰带 (y: 20 ~ 130)：贯穿全宽的双弦纹与连续回字纹/蕉叶纹；
    - 肩部装饰带 (y: 150 ~ 290)：贯穿全宽的如意云肩垂珠带（8个等距云头均匀分布于 x=0~1024）；
-   - 腹部主纹样区 (y: 320 ~ 740)：四方连续生生不息缠枝宝相花或穿云巨龙，藤蔓必须从 x=0 延绵起伏至 x=1024 首尾相接，在 x=512 (正面大花)、x=256与768 (侧翼大花)、x=0与1024 (背面闭合花) 各自盛放繁茂大花与西番莲卷叶，确保瓷瓶 360 度旋转任意视角皆繁花似锦、绝无空白背面；
+   - 腹部主纹样区 (y: 320 ~ 740)：根据主题绘制丰富繁茂的核心大作：
+     * 若主题为【梅花/折枝梅/岁寒三友】：绘制苍老盘曲的横斜梅干（厚重老干路径，如铁画银钩），侧枝挺拔，枝头繁密缀以五瓣青花盛开名梅（5枚圆润花瓣、放射状花丝与泥金花蕊）、侧展半开梅与含苞花蕾，伴随飘拂落英，x=512 为正面迎客主景；
+     * 若主题为【宝相花/缠枝莲】：绘制四方连续生生不息大缠枝，在 x=512、256、768、0/1024 各自盛放八瓣尖角宝相大花与西番莲卷叶；
+     * 若主题为【龙/云水龙】：绘制穿云翻海苍龙戏珠，龙脊起伏，五爪雄劲，祥云缭绕；
+     * 若主题为【鱼藻/荷塘】：绘制游鱼相戏、清漪微澜、水草浮萍摇曳生姿；
    - 足胫装饰带 (y: 770 ~ 980)：贯穿全宽的仰覆双重莲瓣纹与海水江崖。
 2. 背景必须透明（严禁绘制不透明的大矩形背景 <rect fill="#..."/>），直接让纹样附着在 3D 白瓷胎上！
 3. 采用正统景德镇青花配色与分水渐变：
@@ -29,7 +34,7 @@ class VectorMotifAgent(BaseJiuwenAgent):
    - 青花分水淡蓝晕染: rgba(28, 68, 130, 0.45)
    - 极淡水色: rgba(45, 95, 158, 0.20)
    - 描金勾线（极少量点缀）: #c9a24f
-4. 代码效率要求：保持 SVG 精炼紧凑，重点绘制腹部四方连续盛开宝相大花与卷叶，确保必须闭合全部标签与 </svg>。
+4. 结构与代码优化建议：充分利用 `<defs>` 定义精美组件（花朵、花蕾、卷叶），再通过 `<use>` 阵列在画面中多层次绽放，确保高雅华美且标签全部闭合于 </svg>。
 5. 输出格式：请严格使用独立段落输出元数据和 SVG 代码，便于无损解析：
 
 ---METADATA---
@@ -109,7 +114,7 @@ class VectorMotifAgent(BaseJiuwenAgent):
         user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
         if motif_type:
             user_msg += f"（承袭官窑脉络：{motif_type}）"
-        user_msg += "。严禁使用任何旋转椭圆绘制花朵，花瓣请使用古典尖锐莲瓣路径。请确保构图充实典雅，包含口沿带、如意云肩、腹部连绵生动主纹与底足仰莲纹，背景透明，务必闭合全部标签与 </svg>。"
+        user_msg += "。请使用中国传统白描与青花分水技法，利用 <defs> 定义精美花朵/花蕾/枝叶并在画面中丰富展开。严禁生成只有几条孤立单薄点线或星号的简陋草图！花朵必须使用饱满生动的贝塞尔曲线路径与苍劲枝干路径，严禁任何旋转椭圆，背景透明，务必闭合全部标签与 </svg>。"
 
         raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=6000)
 
@@ -159,6 +164,7 @@ class VectorMotifAgent(BaseJiuwenAgent):
         """
         is_dragon = "龙" in theme
         is_fish = "鱼" in theme
+        is_plum = ("梅" in theme) or ("寒梅" in theme) or ("折枝梅" in theme)
 
         if is_dragon:
             # 苍龙戏珠：双龙腾跃海涛如意云水
@@ -230,6 +236,57 @@ class VectorMotifAgent(BaseJiuwenAgent):
       <path d="M 512 710 Q 580 510, 530 360 T 600 210" stroke="#143b75" stroke-width="5.5"/>
       <path d="M 768 730 Q 820 530, 780 380 T 850 230" stroke="#143b75" stroke-width="5.5"/>
       <path d="M 1024 710 Q 1104 500, 1054 350 T 1114 210" stroke="#143b75" stroke-width="5.5"/>
+    </g>
+            """
+        elif is_plum:
+            # 岁寒青花折枝梅花图 (老干盘曲、幽香疏影)
+            main_motif = """
+    <!-- 岁寒青花折枝梅花图主纹 (四方连绵疏影横斜) -->
+    <g stroke-linecap="round" stroke-linejoin="round">
+      <!-- 苍老盘曲主干 (x=0 到 1024 连绵横斜) -->
+      <path d="M 0 540 C 120 420, 220 620, 360 480 C 460 380, 560 560, 680 460 C 800 360, 920 580, 1024 540" stroke="#081830" stroke-width="15" fill="none"/>
+      <path d="M 0 540 C 120 420, 220 620, 360 480 C 460 380, 560 560, 680 460 C 800 360, 920 580, 1024 540" stroke="#143b75" stroke-width="8" fill="none"/>
+
+      <!-- 向上挺秀探出的侧干与新枝 -->
+      <path d="M 180 500 Q 150 400, 130 330" stroke="#081830" stroke-width="6" fill="none"/>
+      <path d="M 280 540 Q 310 630, 330 710" stroke="#081830" stroke-width="5.5" fill="none"/>
+      <path d="M 420 440 Q 480 340, 512 280" stroke="#081830" stroke-width="7" fill="none"/>
+      <path d="M 580 510 Q 560 620, 580 700" stroke="#081830" stroke-width="5" fill="none"/>
+      <path d="M 720 440 Q 710 330, 740 270" stroke="#081830" stroke-width="6.5" fill="none"/>
+      <path d="M 860 420 Q 910 330, 930 260" stroke="#081830" stroke-width="6" fill="none"/>
+      <path d="M 50 520 Q 30 420, 10 350" stroke="#081830" stroke-width="5" fill="none"/>
+      <path d="M 970 510 Q 1000 420, 1020 350" stroke="#081830" stroke-width="5" fill="none"/>
+
+      <!-- 错落盛开的御窑五瓣青花名梅 (x=512 为正中央迎面盛开大花) -->
+      <use href="#plum_flower_refined" x="512" y="300" transform="scale(1.25) translate(-102, -60)"/>
+      <use href="#plum_flower_refined" x="430" y="420" transform="scale(1.05) translate(-20, -20)"/>
+      <use href="#plum_flower_refined" x="570" y="650" transform="scale(0.95)"/>
+      <use href="#plum_flower_refined" x="140" y="340" transform="scale(1.1)"/>
+      <use href="#plum_flower_refined" x="220" y="580" transform="scale(0.9)"/>
+      <use href="#plum_flower_refined" x="330" y="690" transform="scale(1.0)"/>
+      <use href="#plum_flower_refined" x="350" y="470" transform="scale(1.15) translate(-45, -60)"/>
+      <use href="#plum_flower_refined" x="720" y="320" transform="scale(1.2) translate(-120, -50)"/>
+      <use href="#plum_flower_refined" x="790" y="460" transform="scale(0.95)"/>
+      <use href="#plum_flower_refined" x="870" y="600" transform="scale(0.85)"/>
+      <use href="#plum_flower_refined" x="920" y="310" transform="scale(1.08)"/>
+      <use href="#plum_flower_refined" x="40" y="380" transform="scale(1.0)"/>
+      <use href="#plum_flower_refined" x="990" y="380" transform="scale(1.0)"/>
+
+      <!-- 侧展半开梅花与含苞花蕾 -->
+      <use href="#plum_flower_side" x="110" y="310" transform="rotate(-20 110 310) scale(1.1)"/>
+      <use href="#plum_flower_side" x="480" y="270" transform="rotate(25 480 270) scale(1.15)"/>
+      <use href="#plum_flower_side" x="750" y="260" transform="rotate(-15 750 260) scale(1.1)"/>
+      <use href="#plum_flower_side" x="940" y="240" transform="rotate(30 940 240) scale(1.05)"/>
+      <use href="#plum_flower_side" x="320" y="730" transform="rotate(160 320 730) scale(0.95)"/>
+
+      <!-- 飘拂落英花瓣 (暗香浮动) -->
+      <g fill="rgba(20,59,117,0.5)" stroke="#081830" stroke-width="1.8">
+        <ellipse cx="260" cy="410" rx="14" ry="8" transform="rotate(35 260 410)"/>
+        <ellipse cx="390" cy="620" rx="12" ry="7" transform="rotate(-40 390 620)"/>
+        <ellipse cx="560" cy="380" rx="15" ry="9" transform="rotate(25 560 380)"/>
+        <ellipse cx="640" cy="710" rx="13" ry="7" transform="rotate(-15 640 710)"/>
+        <ellipse cx="820" cy="360" rx="14" ry="8" transform="rotate(50 820 360)"/>
+      </g>
     </g>
             """
         else:
@@ -361,6 +418,36 @@ class VectorMotifAgent(BaseJiuwenAgent):
       <path d="M -64 0 C -64 -60, -20 -70, 0 -45 C 20 -70, 64 -60, 64 0 C 40 25, 0 35, 0 -10 C 0 35, -40 25, -64 0 Z" fill="url(#ruyi_grad)" stroke="#081830" stroke-width="3"/>
       <circle cx="0" cy="40" r="6" fill="#081830"/>
       <circle cx="0" cy="55" r="4.5" fill="#c9a24f"/>
+    </g>
+
+    <!-- 7. 景德镇御窑正统五瓣青花梅花勋章 (圆浑五瓣，分水晕染，放射花蕊，泥金点心) -->
+    <g id="plum_flower_refined">
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" transform="rotate(72)" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" transform="rotate(144)" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" transform="rotate(216)" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.5"/>
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" transform="rotate(288)" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.5"/>
+      <!-- 花心花蕊：放射花丝与泥金花药 -->
+      <circle cx="0" cy="0" r="12" fill="#081830"/>
+      <circle cx="0" cy="0" r="6" fill="#c9a24f"/>
+      <path d="M 0 0 L 0 -18 M 0 0 L 14 -12 M 0 0 L 17 6 M 0 0 L 7 17 M 0 0 L -10 15 M 0 0 L -17 3 M 0 0 L -14 -12" stroke="#143b75" stroke-width="1.5"/>
+      <circle cx="0" cy="-19" r="2.2" fill="#c9a24f"/>
+      <circle cx="15" cy="-13" r="2.2" fill="#c9a24f"/>
+      <circle cx="18" cy="7" r="2.2" fill="#c9a24f"/>
+      <circle cx="7" cy="18" r="2.2" fill="#c9a24f"/>
+      <circle cx="-11" cy="16" r="2.2" fill="#c9a24f"/>
+      <circle cx="-18" cy="3" r="2.2" fill="#c9a24f"/>
+      <circle cx="-15" cy="-13" r="2.2" fill="#c9a24f"/>
+    </g>
+
+    <!-- 8. 侧展半开折枝梅花与花蕾 -->
+    <g id="plum_flower_side">
+      <path d="M -15 0 C -25 -25, 0 -40, 20 -30 C 35 -15, 20 10, 0 0 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2"/>
+      <path d="M -8 -8 C -20 -35, 10 -45, 25 -20 Z" fill="rgba(20,59,117,0.55)" stroke="#081830" stroke-width="1.8"/>
+      <path d="M -18 8 Q -10 -2, 0 5 Q 10 -2, 18 8 Z" fill="#081830"/>
+      <path d="M 2 -8 L 16 -24 M 8 -4 L 25 -16" stroke="#143b75" stroke-width="1.5"/>
+      <circle cx="16" cy="-25" r="2" fill="#c9a24f"/>
+      <circle cx="26" cy="-17" r="2" fill="#c9a24f"/>
     </g>
   </defs>
 
