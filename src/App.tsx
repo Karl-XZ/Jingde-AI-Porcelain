@@ -236,26 +236,38 @@ export default function App() {
     setMeasuredRim(r)
   }
 
-  function enterWorkshop(pattern?: ShowcasePattern) {
-    const targetPattern = pattern || landingPattern
-    if (targetPattern && SHOWCASE_PATTERNS[targetPattern]) {
-      const info = SHOWCASE_PATTERNS[targetPattern]
+  function enterWorkshop(pattern?: ShowcasePattern, targetStep: StepKey = 'forming') {
+    setCurStep(targetStep)
+    setMessages([{ role: 'ai', html: AI[targetStep].greet }])
+    setPageView('workshop')
+
+    if (pattern && SHOWCASE_PATTERNS[pattern]) {
+      const info = SHOWCASE_PATTERNS[pattern]
       setActiveMotif(info.motif)
       setActivePreset('meiping')
       setHeightScale(info.heightScale)
       setRimScale(info.rimScale)
       setBellyScale(info.bellyScale)
-      setCurStep('pattern')
-      setPageView('workshop')
       setTimeout(() => {
         canvasRef.current?.loadPreset('meiping')
-        canvasRef.current?.applyMotif(info.motif)
-        canvasRef.current?.setGlaze('gloss')
+        if (targetStep === 'forming' || targetStep === 'trim') {
+          canvasRef.current?.setGlaze('clay')
+        } else {
+          canvasRef.current?.applyMotif(info.motif)
+          canvasRef.current?.setGlaze('gloss')
+        }
       }, 100)
-      toast(`已导入【${info.name}】御窑经典款式！`)
+      toast(targetStep === 'forming'
+        ? `已进入御窑工坊【第一步：制坯】！已载入【${info.name}】器型规格，陶轮就位，请开始拉坯塑形。`
+        : `已导入【${info.name}】御窑经典款式！`)
       return
     }
-    setPageView('workshop')
+
+    // 默认进入工坊：第一道工序【制坯】（高岭土生坯、陶轮旋转待命）
+    setTimeout(() => {
+      canvasRef.current?.setGlaze('clay')
+    }, 100)
+    toast('已进入御窑工坊【第一道工序：定型拉坯】！陶轮已就位，请开始拉坯塑形。')
   }
 
   const [input, setInput] = useState('')
@@ -274,11 +286,14 @@ export default function App() {
     setActivePreset(cfg.preset)
     setActiveMotif(cfg.motif)
     setCurStep(cfg.step)
+    setMessages([{ role: 'ai', html: AI[cfg.step].greet }])
     setActiveGlaze(cfg.glaze)
     setPageView('workshop')
-    canvasRef.current?.loadPreset(cfg.preset)
-    canvasRef.current?.applyMotif(cfg.motif)
-    canvasRef.current?.setGlaze(cfg.glaze)
+    setTimeout(() => {
+      canvasRef.current?.loadPreset(cfg.preset)
+      canvasRef.current?.applyMotif(cfg.motif)
+      canvasRef.current?.setGlaze(cfg.glaze)
+    }, 100)
     toast(`已导入【${cfg.name}】真实 3D 模型！您可直接在左侧面板或陶轮上塑型修改。`)
   }
 
@@ -1525,7 +1540,7 @@ export default function App() {
       <GalleryPage
         onBack={() => setPageView('landing')}
         onRemake={handleRemake}
-        onEnterWorkshop={() => setPageView('workshop')}
+        onEnterWorkshop={() => enterWorkshop()}
       />
     )
   }
@@ -1557,7 +1572,7 @@ export default function App() {
               让传统柴窑工艺在数字空间中获得永续生命。
             </p>
             <div className="landing-actions">
-              <button className="btn-primary" onClick={() => enterWorkshop(landingPattern)}>
+              <button className="btn-primary" onClick={() => enterWorkshop()}>
                 <span>进入工坊</span>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -1574,7 +1589,7 @@ export default function App() {
 
           <div className="landing-right">
             <LandingPorcelain3D
-              onEnterWorkshop={enterWorkshop}
+              onEnterWorkshop={(p) => enterWorkshop(p, 'forming')}
               syncVaseRef={syncVaseRef}
               onPatternChange={setLandingPattern}
               selectedPattern={landingPattern}
