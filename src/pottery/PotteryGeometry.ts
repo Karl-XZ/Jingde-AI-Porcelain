@@ -225,7 +225,7 @@ export class PotteryGeometryBuilder {
    * 全体缩放/修坯参数联动 (采用全器身光滑高斯/smoothstep连续权重，永无截断褶皱)
    */
   public adjustParameters(heightScale: number, rimScale: number, bellyScale: number) {
-    this.height = 14 * Math.max(0.6, Math.min(1.6, heightScale))
+    this.height = 14 * Math.max(0.55, Math.min(1.7, heightScale))
 
     // 寻找当前器型最丰满处 t_max (通常梅瓶在 t=0.76，玉壶春在 t=0.28，斗笠碗在 t=1.0)
     let maxIdx = 0
@@ -238,9 +238,22 @@ export class PotteryGeometryBuilder {
     }
     const tBellyPeak = Math.max(0.20, Math.min(0.80, maxIdx / (this.ringCount - 1)))
 
+    // 全体周身缩放基底因子：若腹部与口径同向收缩或扩张（如口语“周身变细”），全器壁均按连贯权重整体形变
+    let overallWidthRatio = 1.0
+    if (bellyScale < 1.0 && rimScale < 1.0) {
+      overallWidthRatio = Math.min(bellyScale, rimScale)
+    } else if (bellyScale > 1.2 && rimScale > 1.2) {
+      overallWidthRatio = (bellyScale + rimScale) * 0.5
+    }
+
     for (let i = 0; i < this.ringCount; i++) {
       const t = i / (this.ringCount - 1)
       let baseR = this.initialRadii[i]
+
+      // 0. 全身基础宽幅微调（如周身收细）
+      if (overallWidthRatio !== 1.0) {
+        baseR *= 1.0 + (overallWidthRatio - 1.0) * 0.75
+      }
 
       // 1. 腹部/肩部专用膨胀衰减核：确保在口沿 (t > 0.88) 和底座 (t < 0.08) 处彻底衰减至 0，绝不破坏口沿与圈足
       let bellyWeight = 0
@@ -262,7 +275,7 @@ export class PotteryGeometryBuilder {
         baseR *= 1.0 + (rimScale - 1.0) * rimWeight
       }
 
-      this.outerRadii[i] = Math.max(0.9, Math.min(6.8, baseR))
+      this.outerRadii[i] = Math.max(0.85, Math.min(6.8, baseR))
     }
   }
 

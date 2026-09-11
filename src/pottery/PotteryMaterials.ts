@@ -166,6 +166,28 @@ export class PotteryMaterialManager {
         cleanSvg = cleanSvg.replace('<svg', '<svg width="1024" height="1024"')
       }
 
+      // 客户端自愈：使用 DOMParser 检测是否有 parsererror
+      try {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(cleanSvg, 'image/svg+xml')
+        if (doc.querySelector('parsererror')) {
+          console.warn('[PotteryMaterials] XML parsererror detected, auto-healing container tags...')
+          const containers = ['g', 'defs', 'linearGradient', 'radialGradient', 'pattern']
+          for (const c of containers) {
+            const openCount = (cleanSvg.match(new RegExp(`<${c}[\\s>]`, 'g')) || []).length
+            const closeCount = (cleanSvg.match(new RegExp(`</${c}>`, 'g')) || []).length
+            if (openCount > closeCount) {
+              cleanSvg += `\n</${c}>`.repeat(openCount - closeCount)
+            }
+          }
+          if (!cleanSvg.includes('</svg>')) {
+            cleanSvg += '\n</svg>'
+          }
+        }
+      } catch (e) {
+        console.warn('[PotteryMaterials] DOMParser exception:', e)
+      }
+
       const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const img = new Image()
@@ -186,7 +208,8 @@ export class PotteryMaterialManager {
         resolve()
       }
       img.onerror = (err) => {
-        console.warn('[PotteryMaterials] SVG image render error:', err)
+        console.warn('[PotteryMaterials] SVG image render error, applying fallback motif:', err)
+        this.applyPattern('lotus')
         URL.revokeObjectURL(url)
         resolve()
       }

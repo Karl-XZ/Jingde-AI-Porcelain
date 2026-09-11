@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { PotteryCanvas, type PotteryCanvasHandle } from './pottery/PotteryCanvas'
 import {
   LandingPorcelain3D,
@@ -215,6 +215,11 @@ export default function App() {
   const [heightScale, setHeightScale] = useState<number>(1.0)
   const [rimScale, setRimScale] = useState<number>(1.0)
   const [bellyScale, setBellyScale] = useState<number>(1.0)
+  const shapeStateRef = useRef({ heightScale: 1.0, rimScale: 1.0, bellyScale: 1.0 })
+
+  useEffect(() => {
+    shapeStateRef.current = { heightScale, rimScale, bellyScale }
+  }, [heightScale, rimScale, bellyScale])
   const [measuredHeight, setMeasuredHeight] = useState<number>(30.8)
   const [measuredRim, setMeasuredRim] = useState<number>(9.6)
   const [glazeThickness, setGlazeThickness] = useState<number>(1.0)
@@ -224,6 +229,7 @@ export default function App() {
   const [isDigitalHumanActive, setIsDigitalHumanActive] = useState<boolean>(false)
 
   const canvasRef = useRef<PotteryCanvasHandle>(null)
+  const chatBodyRef = useRef<HTMLDivElement>(null)
 
   function handleMeasurementsChange(h: number, r: number) {
     setMeasuredHeight(h)
@@ -283,6 +289,12 @@ export default function App() {
 
   // 华为 openJiuwen & DeepSeek 智能体协作状态
   const [isAiThinking, setIsAiThinking] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight
+    }
+  }, [messages, isAiThinking])
   const [customShapePrompt, setCustomShapePrompt] = useState<string>('')
   const [trimDiag, setTrimDiag] = useState<TrimmingDiagnosisResponse>({
     health_score: 98.6,
@@ -324,6 +336,7 @@ export default function App() {
         setCurStep('forming')
       }
       if (act.payload.reset) {
+        shapeStateRef.current = { heightScale: 1.0, rimScale: 1.0, bellyScale: 1.0 }
         setHeightScale(1.0)
         setRimScale(1.0)
         setBellyScale(1.0)
@@ -334,6 +347,7 @@ export default function App() {
       if (act.payload.preset) {
         const p = String(act.payload.preset) as PresetType
         setActivePreset(p)
+        shapeStateRef.current = { heightScale: 1.0, rimScale: 1.0, bellyScale: 1.0 }
         setHeightScale(1.0)
         setRimScale(1.0)
         setBellyScale(1.0)
@@ -347,9 +361,13 @@ export default function App() {
         toast(`✦ 导师已为您切换器型为【${nameMap[p] || p}】`)
         return
       }
-      const newH = act.payload.heightScale !== undefined ? Number(act.payload.heightScale) : heightScale
-      const newR = act.payload.rimScale !== undefined ? Number(act.payload.rimScale) : rimScale
-      const newB = act.payload.bellyScale !== undefined ? Number(act.payload.bellyScale) : bellyScale
+      const curH = shapeStateRef.current.heightScale
+      const curR = shapeStateRef.current.rimScale
+      const curB = shapeStateRef.current.bellyScale
+      const newH = act.payload.heightScale !== undefined ? Number(act.payload.heightScale) : curH
+      const newR = act.payload.rimScale !== undefined ? Number(act.payload.rimScale) : curR
+      const newB = act.payload.bellyScale !== undefined ? Number(act.payload.bellyScale) : curB
+      shapeStateRef.current = { heightScale: newH, rimScale: newR, bellyScale: newB }
       setHeightScale(newH)
       setRimScale(newR)
       setBellyScale(newB)
@@ -405,9 +423,9 @@ export default function App() {
       }))
       const context = {
         step: curStep,
-        heightScale,
-        rimScale,
-        bellyScale,
+        heightScale: shapeStateRef.current.heightScale,
+        rimScale: shapeStateRef.current.rimScale,
+        bellyScale: shapeStateRef.current.bellyScale,
         motif: activeMotif,
         glaze: activeGlaze,
         preset: activePreset,
@@ -420,7 +438,7 @@ export default function App() {
       // 执行导师下达的口语控瓷交互指令（普通对话模式在此执行；数字人模式由 DigitalHumanMentor 统一协同调度）
       if (res.action && res.action.type !== 'none') {
         if (!isDigitalHuman) {
-          handleMentorAction(res.action)
+          await handleMentorAction(res.action)
         }
       }
       return res
@@ -503,7 +521,7 @@ export default function App() {
     toast(`✦ DeepSeek 正在编译生成【${theme}】SVG 矢量图元...`)
     try {
       const res = await generatePatternSvg(theme, typeKey)
-      let mappedMotif: MotifType = 'blank'
+      let mappedMotif: MotifType = 'lotus'
       if (typeKey) {
         mappedMotif = typeKey
       } else {
@@ -513,7 +531,8 @@ export default function App() {
         else if (t.includes('鱼')) mappedMotif = 'fish'
         else if (t.includes('冰') || t.includes('裂')) mappedMotif = 'ice'
         else if (t.includes('蕉') || t.includes('如意')) mappedMotif = 'banana'
-        else if (t.includes('莲') || t.includes('缠枝')) mappedMotif = 'lotus'
+        else if (t.includes('莲') || t.includes('荷') || t.includes('缠枝')) mappedMotif = 'lotus'
+        else mappedMotif = 'lotus'
       }
       setActiveMotif(mappedMotif)
       await canvasRef.current?.applySvgMotif(res.svg_code)
@@ -527,10 +546,9 @@ export default function App() {
       ])
     } catch (err) {
       console.error(err)
-      if (typeKey) {
-        setActiveMotif(typeKey)
-        canvasRef.current?.applyMotif(typeKey)
-      }
+      const fallback = typeKey || 'lotus'
+      setActiveMotif(fallback)
+      canvasRef.current?.applyMotif(fallback)
       toast('✦ 已应用御窑高精青花图饰')
     } finally {
       setIsGeneratingSvg(false)
@@ -670,8 +688,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="70"
-                    max="130"
+                    min="55"
+                    max="170"
                     value={Math.round(heightScale * 100)}
                     onChange={(e) => setHeightScale(Number(e.target.value) / 100)}
                   />
@@ -683,8 +701,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="60"
-                    max="150"
+                    min="50"
+                    max="160"
                     value={Math.round(rimScale * 100)}
                     onChange={(e) => setRimScale(Number(e.target.value) / 100)}
                   />
@@ -696,8 +714,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="60"
-                    max="150"
+                    min="50"
+                    max="160"
                     value={Math.round(bellyScale * 100)}
                     onChange={(e) => setBellyScale(Number(e.target.value) / 100)}
                   />
@@ -848,8 +866,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="70"
-                    max="130"
+                    min="55"
+                    max="170"
                     value={Math.round(heightScale * 100)}
                     onChange={(e) => setHeightScale(Number(e.target.value) / 100)}
                   />
@@ -861,8 +879,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="60"
-                    max="150"
+                    min="50"
+                    max="160"
                     value={Math.round(rimScale * 100)}
                     onChange={(e) => setRimScale(Number(e.target.value) / 100)}
                   />
@@ -874,8 +892,8 @@ export default function App() {
                   </div>
                   <input
                     type="range"
-                    min="60"
-                    max="150"
+                    min="50"
+                    max="160"
                     value={Math.round(bellyScale * 100)}
                     onChange={(e) => setBellyScale(Number(e.target.value) / 100)}
                   />
@@ -1424,7 +1442,7 @@ export default function App() {
         />
       ) : (
         <>
-          <div className="ai-body">
+          <div className="ai-body" ref={chatBodyRef}>
             {messages.map((m, i) => (
               <div className={`msg ${m.role}`} key={i}>
                 <div className="b" dangerouslySetInnerHTML={{ __html: m.html }} />

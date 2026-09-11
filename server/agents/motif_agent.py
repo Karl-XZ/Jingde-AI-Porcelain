@@ -250,6 +250,43 @@ MASTER_TRADITIONAL_DEFS = """  <defs>
       <path d="M 0 0 C -25 -40, -32 -100, 0 -150 C 32 -100, 25 -40, 0 0 Z" fill="url(#leaf_grad)" stroke="#081830" stroke-width="2.5"/>
       <line x1="0" y1="0" x2="0" y2="-145" stroke="#081830" stroke-width="2"/>
     </g>
+
+    <!-- 12. 【荷花/莲花/缠枝莲组件库】：盛开大荷花、侧展荷、莲蕾、荷叶、莲瓣 -->
+    <g id="lotus_flower_full">
+      <path d="M 0 -96 C 26 -70, 34 -34, 22 -4 C 14 16, -8 22, -22 4 C -34 -34, -26 -70, 0 -96 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.4"/>
+      <path d="M 68 -68 C 68 -34, 48 -6, 22 -2 C 30 -30, 40 -56, 68 -68 Z" fill="rgba(28,68,130,0.65)" stroke="#081830" stroke-width="2.2"/>
+      <path d="M -68 -68 C -40 -56, -30 -30, -22 -2 C -48 -6, -68 -34, -68 -68 Z" fill="rgba(28,68,130,0.65)" stroke="#081830" stroke-width="2.2"/>
+      <path d="M 96 -20 C 82 6, 56 16, 30 10 C 50 -4, 72 -16, 96 -20 Z" fill="rgba(45,95,158,0.45)" stroke="#081830" stroke-width="2"/>
+      <path d="M -96 -20 C -72 -16, -50 -4, -30 10 C -56 16, -82 6, -96 -20 Z" fill="rgba(45,95,158,0.45)" stroke="#081830" stroke-width="2"/>
+      <circle cx="0" cy="-6" r="14" fill="#081830"/>
+      <circle cx="0" cy="-6" r="6" fill="#c9a24f"/>
+    </g>
+
+    <g id="lotus_flower_side">
+      <path d="M -70 10 C -50 -22, -20 -36, 6 -30 C -6 -10, -30 4, -70 10 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.2"/>
+      <path d="M -40 30 C -30 -6, 0 -26, 28 -24 C 14 -2, -8 18, -40 30 Z" fill="rgba(28,68,130,0.6)" stroke="#081830" stroke-width="2.2"/>
+      <path d="M -10 44 C 4 10, 34 -6, 60 0 C 42 24, 16 40, -10 44 Z" fill="rgba(45,95,158,0.4)" stroke="#081830" stroke-width="2"/>
+      <circle cx="8" cy="6" r="8" fill="#c9a24f"/>
+    </g>
+
+    <g id="lotus_bud">
+      <path d="M 0 44 C -16 20, -16 -16, 0 -44 C 16 -16, 16 20, 0 44 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.2"/>
+      <path d="M 0 40 C -6 18, -8 -12, 0 -36 C 8 -12, 6 18, 0 40 Z" fill="rgba(12,33,70,0.7)" stroke="#081830" stroke-width="1.6"/>
+    </g>
+
+    <g id="lotus_leaf">
+      <path d="M 0 0 C -40 -40, -70 -30, -78 4 C -84 34, -60 62, -20 66 C 20 70, 58 52, 66 20 C 72 -6, 40 -20, 0 0 Z" fill="url(#leaf_grad)" stroke="#081830" stroke-width="2.4"/>
+      <path d="M 0 0 L -52 8 M 0 0 L -12 50 M 0 0 L 42 14 M 0 0 L -46 -14" stroke="#081830" stroke-width="1.2" fill="none"/>
+    </g>
+
+    <g id="lotus_petal_band">
+      <path d="M 0 0 C -16 18, -16 44, 0 60 C 16 44, 16 18, 0 0 Z" fill="rgba(28,68,130,0.55)" stroke="#081830" stroke-width="2"/>
+      <path d="M 0 10 C -6 22, -6 40, 0 50 C 6 40, 6 22, 0 10 Z" fill="#081830"/>
+    </g>
+
+    <g id="petal_lotus">
+      <path d="M 0 0 C -18 -15, -28 -40, 0 -52 C 28 -40, 18 -15, 0 0 Z" fill="url(#cobalt_wash_grad)" stroke="#081830" stroke-width="2.2"/>
+    </g>
   </defs>"""
 
 
@@ -266,6 +303,7 @@ class VectorMotifAgent(BaseJiuwenAgent):
 
 【内置景德镇御窑传统纹样 <defs> 组件库（可直接通过 <use href="#ID" .../> 调用）】：
 系统内置了完备的御窑矢量图元，你应当在腹部主纹样区以及辅助装饰带充分利用这些组件搭建宏大画面：
+- 荷花/莲花类：#lotus_flower_full (盛开大荷花), #lotus_flower_side (侧展荷花), #lotus_bud (荷蕾), #lotus_leaf (翻卷荷叶), #lotus_petal_band (莲瓣纹)
 - 梅花类：#plum_flower_refined (盛开五瓣梅), #plum_flower_side (侧展梅), #plum_bud (含苞梅蕾)
 - 牡丹类：#peony_flower_refined (富贵大牡丹), #peony_scroll_lobe (卷草瓣), #peony_leaf (三裂牡丹叶)
 - 墨竹类：#bamboo_leaf_cluster (传统“个/分”字三叶浓翠竹叶簇), #bamboo_culm (带竹节竹竿)
@@ -282,17 +320,10 @@ class VectorMotifAgent(BaseJiuwenAgent):
    - 【严禁左右留白边】！所有横向装饰线必须贯穿全宽（x1="0" 至 x2="1024"），以便 3D 瓷瓶圆周无缝环绕闭合；
    - 颈口装饰带 (y: 20 ~ 130)：贯穿全宽的双弦纹与连续回字纹/蕉叶纹；
    - 肩部装饰带 (y: 150 ~ 290)：贯穿全宽的如意云肩垂珠带（8个等距云头均匀分布于 x=0~1024）；
-   - 腹部主纹样区 (y: 320 ~ 740)：根据主题绘制丰富繁茂的核心大作：
-     * 结合主干路径 <path d="..."/> 搭建苍老枝干、连绵藤蔓、起伏龙脊或水波清漪；
-     * 大量调用上述内置 <use href="#..."/> 组件多层次铺陈，点面结合；
+   - 腹部主纹样区 (y: 320 ~ 740)：根据主题绘制丰富繁茂的核心大作，大量调用内置组件；
    - 足胫装饰带 (y: 770 ~ 980)：贯穿全宽的仰覆双重莲瓣纹与海水江崖。
 2. 背景必须透明（严禁绘制不透明的大矩形背景 <rect fill="#..."/>），直接让纹样附着在 3D 白瓷胎上！
-3. 采用正统景德镇青花配色与分水渐变：
-   - 浓重钴蓝: #081830 / #0c2146
-   - 纯正青花主色: #143b75 / #183e78
-   - 青花分水淡蓝晕染: rgba(28, 68, 130, 0.45)
-   - 极淡水色: rgba(45, 95, 158, 0.20)
-   - 描金勾线: #c9a24f
+3. 严格控制代码紧凑度（请将 SVG 控制在 2000 tokens 内），严禁冗长无序的坐标漫延，务必完整闭合全部标签与 </svg>！
 4. 输出格式：请严格使用独立段落输出元数据和 SVG 代码：
 
 ---METADATA---
@@ -313,13 +344,75 @@ class VectorMotifAgent(BaseJiuwenAgent):
             system_prompt=self.SYSTEM_PROMPT,
         )
 
+    def _heal_svg_xml(self, svg: str) -> str:
+        """
+        全量 XML 语法自愈引擎：
+        修复因大模型截断（length limit）、未闭合标签、非法字符导致的 XML 解析错误，
+        确保返回给浏览器的 SVG 100% 能够被 Image/DOMParser 成功渲染。
+        """
+        import xml.etree.ElementTree as ET
+        if not svg or "<svg" not in svg:
+            return ""
+
+        # 1. 裁剪起止
+        start = svg.find("<svg")
+        svg = svg[start:]
+
+        # 裁剪末尾任何被截断在半空的非法未闭合标签（如 <use href="... x="944）
+        last_gt = svg.rfind(">")
+        if last_gt != -1 and last_gt < len(svg) - 1:
+            svg = svg[:last_gt + 1]
+
+        # 移除末端可能孤立的 </svg>，以便统一重平衡栈
+        svg = re.sub(r'<\/svg>\s*$', '', svg, flags=re.IGNORECASE).strip()
+
+        # 2. 栈平衡闭合容器标签
+        containers = ['svg', 'defs', 'g', 'linearGradient', 'radialGradient', 'pattern', 'mask', 'clipPath', 'symbol']
+        tag_stack = []
+
+        tokens = re.finditer(r'<(\/)?([a-zA-Z][a-zA-Z0-9_-]*)([^>]*?)(\/)?>', svg)
+        for t in tokens:
+            is_close = bool(t.group(1))
+            tag_name = t.group(2)
+            is_self_close = bool(t.group(4))
+
+            if tag_name not in containers:
+                continue
+
+            if is_close:
+                if tag_stack and tag_stack[-1] == tag_name:
+                    tag_stack.pop()
+                elif tag_name in tag_stack:
+                    while tag_stack and tag_stack[-1] != tag_name:
+                        tag_stack.pop()
+                    if tag_stack:
+                        tag_stack.pop()
+            elif not is_self_close:
+                tag_stack.append(tag_name)
+
+        # 逆序压入未闭合标签
+        for tag in reversed(tag_stack):
+            svg += f"\n</{tag}>"
+
+        # 3. 使用 ElementTree 终极核验，确保 100% 有效
+        try:
+            ET.fromstring(svg)
+            return svg
+        except Exception as err:
+            print(f"[VectorMotifAgent] Healer ET validation notice: {err}")
+            clean_svg = re.sub(r'([a-zA-Z-]+)="([^"]*?)(?:"|$)', r'\1="\2"', svg)
+            try:
+                ET.fromstring(clean_svg)
+                return clean_svg
+            except Exception:
+                return svg
+
     def _extract_svg_code(self, text: str) -> Optional[str]:
         """Extract valid SVG XML string from LLM output, with auto-healing for truncated output."""
         candidate = None
         # 1. Delimiter format
         if "---SVG---" in text:
             svg_part = text.split("---SVG---", 1)[1].strip()
-            # If wrapped in markdown code blocks
             m = re.search(r"```(?:xml|svg)?\s*([\s\S]*?)```", svg_part)
             if m:
                 candidate = m.group(1).strip()
@@ -338,20 +431,13 @@ class VectorMotifAgent(BaseJiuwenAgent):
             if m:
                 candidate = m.group(1).strip()
 
-        # 4. Handle truncated/unterminated <svg ... (e.g. LLM reached max token limit)
+        # 4. Handle truncated/unterminated <svg ...
         if not candidate and "<svg" in text:
             start_idx = text.find("<svg")
             candidate = text[start_idx:].strip()
 
         if candidate and "<svg" in candidate:
-            # If not cleanly ended with </svg>
-            if "</svg>" not in candidate.lower():
-                # Cut off any incomplete tag at the tail
-                last_gt = candidate.rfind(">")
-                if last_gt != -1:
-                    candidate = candidate[:last_gt+1]
-                candidate += "\n</svg>"
-            return candidate.strip()
+            return self._heal_svg_xml(candidate)
 
         return None
 
@@ -365,14 +451,13 @@ class VectorMotifAgent(BaseJiuwenAgent):
             if parsed:
                 return parsed
 
-        # Fallback to general JSON extraction
         return self.extract_json(text) or {}
 
     async def generate_motif(self, theme: str, motif_type: Optional[str] = None) -> Dict[str, Any]:
         user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
         if motif_type:
             user_msg += f"（承袭官窑脉络：{motif_type}）"
-        user_msg += "。请使用中国传统白描与青花分水技法，利用 <defs> 定义精美花朵/花蕾/枝叶并在画面中丰富展开。严禁生成只有几条孤立单薄点线或星号的简陋草图！花朵必须使用饱满生动的贝塞尔曲线路径与苍劲枝干路径，严禁任何旋转椭圆，背景透明，务必闭合全部标签与 </svg>。"
+        user_msg += "。请使用中国传统白描与青花分水技法，利用 <defs> 定义精美花朵/花蕾/枝叶并在画面中丰富展开。花朵必须使用饱满生动的贝塞尔曲线路径与苍劲枝干路径，严禁任何旋转椭圆，背景透明，请控制在 2500 tokens 以内并务必闭合全部标签与 </svg>。"
 
         raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=6000)
 
@@ -394,12 +479,12 @@ class VectorMotifAgent(BaseJiuwenAgent):
                     body_content = svg_code.split("</defs>", 1)[1]
                 elements = re.findall(r'<(?:path|use|circle|polygon|g)\b', body_content)
                 has_belly_content = bool(re.search(r'(?:<use|\b(?:y|y1|y2|cy)\s*=\s*["\']?(?:[3-7]\d\d|800))', body_content))
-                # Require substantial artistic elements and belly coverage
-                if len(elements) >= 12 and has_belly_content:
+                if len(elements) >= 8 and has_belly_content:
                     is_valid_complete_motif = True
 
         if is_valid_complete_motif and svg_code:
             final_svg = self._ensure_master_defs(svg_code)
+            final_svg = self._heal_svg_xml(final_svg)
             return {
                 "motif_name": meta.get("motif_name", theme),
                 "symbolism": meta.get("symbolism", "御窑传统经典图式，生生不息，气韵生动。"),

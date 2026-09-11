@@ -8,7 +8,7 @@ const API_BASE = 'http://127.0.0.1:8000/api'
 export interface MentorChatResponse {
   reply: string
   action?: {
-    type: 'update_shape' | 'apply_motif' | 'update_glaze' | 'trim_foot' | 'fire_kiln' | 'appraise' | 'none'
+    type: 'update_shape' | 'apply_motif' | 'generate_svg' | 'update_glaze' | 'trim_foot' | 'fire_kiln' | 'appraise' | 'none'
     payload?: Record<string, unknown>
   }
 }
