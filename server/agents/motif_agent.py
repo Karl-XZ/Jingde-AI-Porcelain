@@ -294,15 +294,18 @@ class VectorMotifAgent(BaseJiuwenAgent):
     """青花画作匠 (VectorMotifAgent)：DeepSeek 纯 SVG 矢量图元生成与解析"""
 
     SYSTEM_PROMPT = """你是由华为 openJiuwen 框架驱动的【景德镇御窑青花画作匠】。
-你精通明清官窑青花纹样构图（缠枝宝相花、云水祥龙、鱼藻清漪、折枝瑞果、折枝梅、松鹤延年、岁寒三友、墨竹、富贵牡丹、蕉叶回纹、如意云肩等）以及苏麻离青、平等青矿物料发色审美。
-你具备高超的代码生成能力，能够使用纯矢量 SVG 代码（<svg viewBox="0 0 1024 1024" ...>）绘制纯正典雅、构图饱满的景德镇青花大作。
+你精通明清官窑青花纹样构图（缠枝宝相花、云水祥龙、鱼藻清漪、折枝瑞果、折枝梅、松鹤延年、岁寒三友、墨竹、富贵牡丹、弦纹、旋线、蕉叶回纹、如意云肩等）以及苏麻离青、平等青矿物料发色审美。
+你具备高超的代码生成能力，能够使用纯矢量 SVG 代码（<svg viewBox="0 0 1024 1024" ...>）绘制纯正典雅的景德镇青花大作。
 
-【极为严肃的美学禁令】：
-1. 【严禁使用旋转椭圆 <ellipse transform="rotate(...)"/> 绘制花朵】！那会生成类似现代物理学“原子轨道模型/玻尔原子/React 图标”的滑稽图形，彻底破坏御窑古典美学！花瓣必须使用带有饱满双向弧度或尖锐瓣尖的中式路径 <path d="..."/> 或使用系统内置 <defs> 组件！
-2. 【严禁生成单调平庸的原始点线图（严禁只画几条横线、孤立圆圈或星号散点）】！必须绘制出充实饱满、具有东方书画骨法笔意与分水层次的完整大作！
+【极为严肃的美学与意图准则】：
+1. 【严格听从用户主题意图，因题制宜】：
+   - 【纯线条 / 弦纹 / 旋纹 / 几何 / 极简类】：当用户要求“纯线条”、“不要具体图案”、“无物象”、“弦纹”、“几何网格”时，**绝对严禁添加任何具体花朵、枝叶或动物图元**！必须纯以景德镇官窑贯穿全宽（x1="0" 至 x2="1024"）的匀净弦纹（同心圆周平行线）、腹部平缓微澜的水波旋线或几何细密线描构图，展现拉坯勾线“线如春蚕吐丝、骨力内含”的至高极简美学！
+   - 【具象传统花鸟/瑞兽大作】：（如牡丹、荷花、梅花、竹兰、松鹤、祥龙、游鱼等），在腹部核心区绘制饱满大作，充分运用系统内置图元与自主绘制枝干；
+   - 【自拟现代/创意主题】：紧密围绕用户真实描述自由构图，切忌无视指令生搬硬套预置花朵！
+2. 【严禁使用旋转椭圆 <ellipse transform="rotate(...)"/> 绘制花朵】！那会生成类似现代物理学“原子轨道模型/玻尔原子/React 图标”的滑稽图形，彻底破坏御窑古典美学！花瓣必须使用带有饱满双向弧度或尖锐瓣尖的中式路径 <path d="..."/> 或使用系统内置组件！
 
 【内置景德镇御窑传统纹样 <defs> 组件库（可直接通过 <use href="#ID" .../> 调用）】：
-系统内置了完备的御窑矢量图元，你应当在腹部主纹样区以及辅助装饰带充分利用这些组件搭建宏大画面：
+系统内置了完备的御窑矢量图元，在需要具象花卉、瑞兽的大作中可充分调用：
 - 荷花/莲花类：#lotus_flower_full (盛开大荷花), #lotus_flower_side (侧展荷花), #lotus_bud (荷蕾), #lotus_leaf (翻卷荷叶), #lotus_petal_band (莲瓣纹)
 - 梅花类：#plum_flower_refined (盛开五瓣梅), #plum_flower_side (侧展梅), #plum_bud (含苞梅蕾)
 - 牡丹类：#peony_flower_refined (富贵大牡丹), #peony_scroll_lobe (卷草瓣), #peony_leaf (三裂牡丹叶)
@@ -316,25 +319,21 @@ class VectorMotifAgent(BaseJiuwenAgent):
 - 边饰类：#ruyi_cloud_unit (肩部如意云头纹), #banana_leaf (挺拔蕉叶纹)
 
 【极为重要的构图与格式规范】：
-1. 构图必须采用景德镇御窑 360° 圆周通体环绕与四段式正统瓷画层次（四方连续通景瓷画）：
+1. 构图必须采用景德镇御窑 360° 圆周通体环绕与正统瓷画层次：
    - 【严禁左右留白边】！所有横向装饰线必须贯穿全宽（x1="0" 至 x2="1024"），以便 3D 瓷瓶圆周无缝环绕闭合；
-   - 颈口装饰带 (y: 20 ~ 130)：贯穿全宽的双弦纹与连续回字纹/蕉叶纹；
-   - 肩部装饰带 (y: 150 ~ 290)：贯穿全宽的如意云肩垂珠带（8个等距云头均匀分布于 x=0~1024）；
-   - 腹部主纹样区 (y: 320 ~ 740)：根据主题绘制丰富繁茂的核心大作，大量调用内置组件；
-   - 足胫装饰带 (y: 770 ~ 980)：贯穿全宽的仰覆双重莲瓣纹与海水江崖。
-2. 背景必须透明（严禁绘制不透明的大矩形背景 <rect fill="#..."/>），直接让纹样附着在 3D 白瓷胎上！
-3. 严格控制代码紧凑度（请将 SVG 控制在 2000 tokens 内），严禁冗长无序的坐标漫延，务必完整闭合全部标签与 </svg>！
-4. 输出格式：请严格使用独立段落输出元数据和 SVG 代码：
+   - 背景必须透明（严禁绘制不透明的大矩形背景 <rect fill="#..."/>），直接让纹样附着在 3D 白瓷胎上！
+2. 严格控制代码紧凑度（请将 SVG 控制在 2000 tokens 内），务必完整闭合全部标签与 </svg>！
+3. 输出格式：请严格使用独立段落输出元数据和 SVG 代码：
 
 ---METADATA---
 {
-  "motif_name": "纹样题名（如：明宣德御窑青花折枝梅花纹）",
-  "symbolism": "吉祥寓意与纹样题解（冰清玉洁、岁寒知松柏等）",
-  "cobalt_notes": "青料发色特征（如：苏麻离青浓翠晕散，分水五色，伴随锡光铁斑）"
+  "motif_name": "纹样题名（如：明永乐御窑青花匀净多重弦纹白描大作，或明宣德御窑青花折枝梅花纹）",
+  "symbolism": "吉祥寓意与纹样题解",
+  "cobalt_notes": "青料发色特征（如：苏麻离青浓翠晕散，线条匀挺见骨力）"
 }
 ---SVG---
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- 此处为丰富、饱满、层次分明的纯矢量青花代码 -->
+  <!-- 此处为纯矢量青花代码 -->
 </svg>"""
 
     def __init__(self):
@@ -454,18 +453,39 @@ class VectorMotifAgent(BaseJiuwenAgent):
         return self.extract_json(text) or {}
 
     async def generate_motif(self, theme: str, motif_type: Optional[str] = None) -> Dict[str, Any]:
-        user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
-        if motif_type:
-            user_msg += f"（承袭官窑脉络：{motif_type}）"
-        user_msg += (
-            "。\n【系统重要规范】：\n"
-            "1. 系统底座已全量内置景德镇传统图元库（包括盛开大花 #peony_flower_refined、#lotus_flower_full、"
-            "#plum_flower_refined、#chrysanthemum_flower、#orchid_flower、祥龙、苍松仙鹤、游鱼水藻、三裂叶、如意云肩等），"
-            "**绝对严禁在代码中重复编写庞大的 <defs> 定义**！\n"
-            "2. 请直接在 <svg viewBox=\"0 0 1024 1024\"> 根节点下，使用 <path> 绘制苍劲枝干/水波，"
-            "并使用 <use href=\"#ID\" .../> 在腹部核心区（重点位于 x: 256, 512, 768，y: 420~600 处）密集展开至少 3~5 朵盛开主花/主景！\n"
-            "3. 保持背景透明，严禁不透明矩形；严禁任何旋转椭圆；请控制在 1500 tokens 内并务必完整闭合全部标签与 </svg>。"
-        )
+        pure_line_keywords = [
+            "纯线", "线条", "线图", "线描", "弦纹", "旋纹", "环线", "横线",
+            "无图案", "不要图案", "不要具体图案", "不希望有具体图案", "不要花", "无花",
+            "几何", "网格", "席纹", "编织", "暗纹", "开片", "冰裂", "极简线条", "纯线条图",
+            "不要画花", "不画花", "无具体物象", "不要物象", "抽象线条"
+        ]
+        is_pure_lines = any(kw in theme for kw in pure_line_keywords)
+
+        if is_pure_lines:
+            user_msg = (
+                f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】。\n"
+                "【极为重要：用户的核心诉求是“纯线条”、“无具体物象”，必须是纯净、优雅、疏密有致的线描艺术！】\n"
+                "【系统重要规范】：\n"
+                "1. 【严格禁止任何具象花朵、叶片、动物、人物图元】！严禁使用 #peony_flower_refined, #lotus_flower_full, #full_baoxiang_medallion 等任何内置花卉/鸟兽组件！\n"
+                "2. 请直接在 <svg viewBox=\"0 0 1024 1024\"> 根节点下，使用景德镇御窑经典的【弦纹】与【纯线条】构图：\n"
+                "   - 从口沿、颈、肩、腹到足胫，贯穿全宽（x1=\"0\" 至 x2=\"1024\"）绘制一组组匀净、疏密有致的青花弦纹（粗细 1.5px~6px 的水平圆周线条）；\n"
+                "   - 在腹部主视区（y: 320~740）绘制规整平行的同心圆周弦纹、或微澜起伏的极简水波波浪线，展现大匠拉坯勾线如春蚕吐丝的纯线条骨法笔意！\n"
+                "3. 保持背景透明，严禁不透明矩形；严禁任何旋转椭圆；请控制在 1500 tokens 内并务必完整闭合全部标签与 </svg>。\n"
+                "4. 元数据 motif_name 必须严格反映纯线条主题（如：【明永乐御窑青花匀净多重弦纹白描大作】），题名与寓意中绝对不要出现任何花卉、牡丹、宝相词汇！"
+            )
+        else:
+            user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
+            if motif_type:
+                user_msg += f"（承袭官窑脉络：{motif_type}）"
+            user_msg += (
+                "。\n【系统重要规范】：\n"
+                "1. 系统底座已全量内置景德镇传统图元库（包括盛开大花 #peony_flower_refined、#lotus_flower_full、"
+                "#plum_flower_refined、#chrysanthemum_flower、#orchid_flower、祥龙、苍松仙鹤、游鱼水藻、三裂叶、如意云肩等），"
+                "**绝对严禁在代码中重复编写庞大的 <defs> 定义**！\n"
+                "2. 请直接在 <svg viewBox=\"0 0 1024 1024\"> 根节点下，根据主题自主使用 <path> 绘制苍劲枝干/水波/形貌，"
+                "若主题涉及花卉瑞兽，可结合内置图元在腹部主视区充实画面；若为其他主题，请根据主题自由创作，严禁生搬硬套不相干的预设！\n"
+                "3. 保持背景透明，严禁不透明矩形；严禁任何旋转椭圆；请控制在 1500 tokens 内并务必完整闭合全部标签与 </svg>。"
+            )
 
         raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=4000)
 
@@ -485,32 +505,45 @@ class VectorMotifAgent(BaseJiuwenAgent):
                 body_content = svg_code
                 if "</defs>" in svg_code:
                     body_content = svg_code.split("</defs>", 1)[1]
-                elements = re.findall(r'<(?:path|use|circle|polygon|g)\b', body_content)
+                elements = re.findall(r'<(?:path|use|circle|polygon|line|polyline|g)\b', body_content)
                 
-                # 腹部实质性图元校验：必须在腹部视区 (y: 300~750) 具备实质主景（至少 2 个 <use> 或 3 组具有腹部坐标的路径）
+                # 腹部实质性图元校验
                 belly_uses = re.findall(r'<use\b[^>]*href=["\']#([^"\']+)["\']', body_content)
                 belly_coords = re.findall(r'\b(?:y|y1|y2|cy|translate\(\s*\d+\s*,\s*)\s*=?\s*["\']?(?:[3-6]\d\d|7[0-4]\d)\b', body_content)
-                has_substantive_belly = len(belly_uses) >= 2 or len(belly_coords) >= 3
+                belly_path_nums = re.findall(r'\b(?:3[2-9]\d|[4-6]\d\d|7[0-4]\d)\b', body_content)
+                has_substantive_belly = len(belly_uses) >= 2 or len(belly_coords) >= 3 or len(belly_path_nums) >= 4
 
-                if len(elements) >= 8 and has_substantive_belly:
-                    is_valid_complete_motif = True
+                if is_pure_lines:
+                    flower_animal_tags = ["#peony", "#lotus", "#baoxiang", "#plum", "#chrysanthemum", "#orchid", "#crane", "#dragon", "#fish"]
+                    has_forbidden_flowers = any(ft in body_content for ft in flower_animal_tags)
+                    if len(elements) >= 4 and has_substantive_belly and not has_forbidden_flowers:
+                        is_valid_complete_motif = True
+                else:
+                    if len(elements) >= 8 and has_substantive_belly:
+                        is_valid_complete_motif = True
 
         if is_valid_complete_motif and svg_code:
             final_svg = self._ensure_master_defs(svg_code)
             final_svg = self._heal_svg_xml(final_svg)
+            default_name = "明永乐御窑青花匀净多重弦纹大作" if is_pure_lines else theme
+            default_symbolism = "大巧若拙，素以为绚。以纯净弦纹环走器身，如月轮流光，生生不息。" if is_pure_lines else "御窑传统经典图式，生生不息，气韵生动。"
+            default_cobalt = "苏麻离青发色深沉，线条匀挺见骨力，浓淡相宜。" if is_pure_lines else "苏麻离青发色深浓，分水兼备，铁锈斑深入胎骨。"
             return {
-                "motif_name": meta.get("motif_name", theme),
-                "symbolism": meta.get("symbolism", "御窑传统经典图式，生生不息，气韵生动。"),
-                "cobalt_notes": meta.get("cobalt_notes", "苏麻离青发色深浓，分水兼备，铁锈斑深入胎骨。"),
+                "motif_name": meta.get("motif_name", default_name),
+                "symbolism": meta.get("symbolism", default_symbolism),
+                "cobalt_notes": meta.get("cobalt_notes", default_cobalt),
                 "svg_code": final_svg,
             }
 
         # Fallback to authentic museum-grade procedural heritage SVG with DeepSeek's custom cultural title & notes
         fallback_svg = self._generate_procedural_heritage_svg(theme)
+        default_name = "明永乐御窑青花匀净多重弦纹大作" if is_pure_lines else theme
+        default_symbolism = "大巧若拙，素以为绚。以纯净弦纹环走器身，如月轮流光，生生不息。" if is_pure_lines else "御窑经典青花四段式章法，寄托吉庆祥和、生生不息之意象。"
+        default_cobalt = "苏麻离青发色深沉，线条匀挺见骨力，浓淡相宜。" if is_pure_lines else "苏麻离青发色深沉如蓝宝石，分水五色兼备，微见铁锈锡斑。"
         return {
-            "motif_name": meta.get("motif_name", theme),
-            "symbolism": meta.get("symbolism", "御窑经典青花四段式章法，寄托吉庆祥和、生生不息之意象。"),
-            "cobalt_notes": meta.get("cobalt_notes", "苏麻离青发色深沉如蓝宝石，分水五色兼备，微见铁锈锡斑。"),
+            "motif_name": meta.get("motif_name", default_name),
+            "symbolism": meta.get("symbolism", default_symbolism),
+            "cobalt_notes": meta.get("cobalt_notes", default_cobalt),
             "svg_code": fallback_svg,
         }
 
@@ -534,8 +567,72 @@ class VectorMotifAgent(BaseJiuwenAgent):
     def _generate_procedural_heritage_svg(self, theme: str) -> str:
         """
         非遗级高精御窑青花程序化生成器 (透明通道背景，具备颈、肩、腹、足四重正统层次)
-        支持中国传统全量主题：梅花、牡丹、墨竹、幽兰、菊花、松鹤延年、岁寒三友、祥龙、鱼藻、山水、宝相花
+        支持中国传统全量主题：纯线条弦纹、梅花、牡丹、墨竹、幽兰、菊花、松鹤延年、岁寒三友、祥龙、鱼藻、山水、宝相花
         """
+        pure_line_keywords = [
+            "纯线", "线条", "线图", "线描", "弦纹", "旋纹", "环线", "横线",
+            "无图案", "不要图案", "不要具体图案", "不希望有具体图案", "不要花", "无花",
+            "几何", "网格", "席纹", "编织", "暗纹", "开片", "冰裂", "极简线条"
+        ]
+        is_pure_lines = any(kw in theme for kw in pure_line_keywords)
+
+        if is_pure_lines:
+            # 景德镇御窑青花匀净弦纹与极简旋线大作 (大巧若拙、素以为绚、零具象图案)
+            return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+{MASTER_TRADITIONAL_DEFS}
+  <!-- 景德镇御窑纯线条弦纹通景图 (x1=0 到 x2=1024 贯穿圆周无缝闭合) -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 1. 口沿至颈部弦纹组 (y: 30 ~ 130) -->
+    <line x1="0" y1="35" x2="1024" y2="35" stroke="#081830" stroke-width="5"/>
+    <line x1="0" y1="48" x2="1024" y2="48" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="62" x2="1024" y2="62" stroke="#143b75" stroke-width="1.5" stroke-dasharray="12,6"/>
+    <line x1="0" y1="78" x2="1024" y2="78" stroke="#081830" stroke-width="3"/>
+    <line x1="0" y1="95" x2="1024" y2="95" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="112" x2="1024" y2="112" stroke="#143b75" stroke-width="1.5"/>
+    <line x1="0" y1="130" x2="1024" y2="130" stroke="#081830" stroke-width="4"/>
+
+    <!-- 2. 颈部至溜肩过渡带 (y: 160 ~ 290) 疏密有致的琴弦线 -->
+    <line x1="0" y1="165" x2="1024" y2="165" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="185" x2="1024" y2="185" stroke="#143b75" stroke-width="1.8"/>
+    <line x1="0" y1="210" x2="1024" y2="210" stroke="#081830" stroke-width="3.5"/>
+    <line x1="0" y1="238" x2="1024" y2="238" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="268" x2="1024" y2="268" stroke="#143b75" stroke-width="1.5" stroke-dasharray="16,8"/>
+    <line x1="0" y1="295" x2="1024" y2="295" stroke="#081830" stroke-width="5"/>
+
+    <!-- 3. 腹部核心主视区：匀净旋纹与水波涟漪线条 (y: 320 ~ 740) -->
+    <line x1="0" y1="330" x2="1024" y2="330" stroke="#143b75" stroke-width="2.5"/>
+    <line x1="0" y1="355" x2="1024" y2="355" stroke="#143b75" stroke-width="1.8"/>
+    <line x1="0" y1="385" x2="1024" y2="385" stroke="#081830" stroke-width="4"/>
+
+    <!-- 腹中微澜同心波浪弦纹 (模拟陶轮拉坯与轻拂水波) -->
+    <path d="M 0 420 Q 128 405, 256 420 T 512 420 T 768 420 T 1024 420" stroke="#143b75" stroke-width="2.5"/>
+    <path d="M 0 445 Q 128 430, 256 445 T 512 445 T 768 445 T 1024 445" stroke="#235ea8" stroke-width="1.8"/>
+    <path d="M 0 470 Q 128 455, 256 470 T 512 470 T 768 470 T 1024 470" stroke="#143b75" stroke-width="3"/>
+    <line x1="0" y1="500" x2="1024" y2="500" stroke="#081830" stroke-width="6"/>
+    <line x1="0" y1="518" x2="1024" y2="518" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="535" x2="1024" y2="535" stroke="#143b75" stroke-width="1.5" stroke-dasharray="10,6"/>
+    <path d="M 0 560 Q 128 575, 256 560 T 512 560 T 768 560 T 1024 560" stroke="#143b75" stroke-width="3"/>
+    <path d="M 0 585 Q 128 600, 256 585 T 512 585 T 768 585 T 1024 585" stroke="#235ea8" stroke-width="1.8"/>
+    <path d="M 0 610 Q 128 625, 256 610 T 512 610 T 768 610 T 1024 610" stroke="#143b75" stroke-width="2.5"/>
+
+    <!-- 腹下匀称收束弦纹 -->
+    <line x1="0" y1="645" x2="1024" y2="645" stroke="#081830" stroke-width="4"/>
+    <line x1="0" y1="675" x2="1024" y2="675" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="708" x2="1024" y2="708" stroke="#143b75" stroke-width="2.5"/>
+    <line x1="0" y1="740" x2="1024" y2="740" stroke="#081830" stroke-width="5"/>
+
+    <!-- 4. 胫部与圈足底弦组 (y: 770 ~ 1000) -->
+    <line x1="0" y1="775" x2="1024" y2="775" stroke="#143b75" stroke-width="2.5"/>
+    <line x1="0" y1="805" x2="1024" y2="805" stroke="#143b75" stroke-width="1.8" stroke-dasharray="14,7"/>
+    <line x1="0" y1="840" x2="1024" y2="840" stroke="#081830" stroke-width="4"/>
+    <line x1="0" y1="880" x2="1024" y2="880" stroke="#143b75" stroke-width="2.2"/>
+    <line x1="0" y1="920" x2="1024" y2="920" stroke="#143b75" stroke-width="3"/>
+    <line x1="0" y1="955" x2="1024" y2="955" stroke="#081830" stroke-width="5"/>
+    <line x1="0" y1="980" x2="1024" y2="980" stroke="#143b75" stroke-width="2"/>
+    <line x1="0" y1="1000" x2="1024" y2="1000" stroke="#081830" stroke-width="6"/>
+  </g>
+</svg>"""
+
         is_dragon = "龙" in theme
         is_fish = "鱼" in theme
         is_plum = ("梅" in theme) or ("寒梅" in theme) or ("折枝梅" in theme)

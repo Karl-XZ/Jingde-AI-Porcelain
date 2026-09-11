@@ -200,14 +200,14 @@ export class PotteryMaterialManager {
         this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height)
 
         // 3. 物理画布级像素防白保底：
-        // 采样检测 3D 正面主视区腹部中心 (x: 412~612, y: 412~612) 是否存在有效青花色料
+        // 采样检测 3D 器身主视区 (y: 120~880) 是否存在有效青花色料
         try {
-          const sampleW = 200
-          const sampleH = 200
-          const imgData = this.ctx.getImageData(412, 412, sampleW, sampleH)
+          const sampleY = Math.round(this.canvas.height * 0.12)
+          const sampleH = Math.round(this.canvas.height * 0.76)
+          const imgData = this.ctx.getImageData(0, sampleY, this.canvas.width, sampleH)
           const data = imgData.data
           let coloredCount = 0
-          for (let i = 0; i < data.length; i += 4) {
+          for (let i = 0; i < data.length; i += 8) {
             const r = data[i]
             const g = data[i + 1]
             const b = data[i + 2]
@@ -216,9 +216,9 @@ export class PotteryMaterialManager {
               coloredCount++
             }
           }
-          // 若腹部正面中心着色像素不足 0.2%，说明主景严重缺失或为空白截断，立即自动补绘御窑青花大作
-          if (coloredCount < (sampleW * sampleH * 0.002)) {
-            console.warn('[PotteryMaterials] White/empty belly detected on canvas, auto-reinforcing authentic Qinghua motif')
+          // 仅当整器主视区完全无任何着色像素（少于 30 像素，证明代码彻底空白或解析失败）时才执行保底
+          if (coloredCount < 30) {
+            console.warn('[PotteryMaterials] Completely white/empty canvas detected, auto-reinforcing authentic Qinghua motif')
             renderAICompositeMotif(this.ctx, this.canvas.width, this.canvas.height)
           }
         } catch (e) {

@@ -59,10 +59,10 @@ class MasterMentorAgent(BaseJiuwenAgent):
     def _fallback_intent(self, message: str) -> Dict[str, Any]:
         """Robust semantic fallback extraction across colloquial Chinese pottery expressions."""
         m = message.lower()
-        # 1. 纹样类 (生图、画花、绘图)
-        if any(w in m for w in ["画", "绘", "生图", "生成", "纹", "图", "添上", "牡丹", "荷花", "梅花", "竹", "龙", "鱼", "鹤", "菊", "兰"]):
-            theme = re.sub(r'^(请|帮我|在瓷身|在瓶身)?(生成|画|绘|绘制|添上|做个|弄个)', '', message).strip() or message
-            theme = theme.replace("图", "").replace("纹", "").strip() or theme
+        # 1. 纹样类 (生图、画花、绘图、线条描绘)
+        if any(w in m for w in ["画", "绘", "生图", "生成", "纹", "图", "添上", "线条", "弦纹", "牡丹", "荷花", "梅花", "竹", "龙", "鱼", "鹤", "菊", "兰"]):
+            theme = re.sub(r'^(请|帮我|在瓷身|在瓶身)?(生成|画|绘|绘制|添上|做个|弄个|搞个)', '', message).strip() or message
+            theme = re.sub(r'[图纹样]+$', '', theme).strip() or theme
             return {"type": "generate_svg", "payload": {"theme": theme}}
         # 2. 变细/抽条/修长/变瘦
         if any(w in m for w in ["抽条", "收窄", "变细", "整体收细", "周身变细", "修长细窄", "做瘦", "做细", "细一点", "瘦一点", "亭亭玉立", "纤细", "窄一点", "抽长"]):
