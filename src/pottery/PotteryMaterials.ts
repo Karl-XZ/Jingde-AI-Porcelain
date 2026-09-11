@@ -199,6 +199,32 @@ export class PotteryMaterialManager {
         // 2. 将正统青花大作按圆周环形映射
         this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height)
 
+        // 3. 物理画布级像素防白保底：
+        // 采样检测 3D 正面主视区腹部中心 (x: 412~612, y: 412~612) 是否存在有效青花色料
+        try {
+          const sampleW = 200
+          const sampleH = 200
+          const imgData = this.ctx.getImageData(412, 412, sampleW, sampleH)
+          const data = imgData.data
+          let coloredCount = 0
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i]
+            const g = data[i + 1]
+            const b = data[i + 2]
+            // 白瓷羊脂底色为 (248, 246, 240)，若像素明显偏离白底（青花钴蓝料），计为有效彩绘
+            if (r < 220 || g < 220 || b < 200) {
+              coloredCount++
+            }
+          }
+          // 若腹部正面中心着色像素不足 0.2%，说明主景严重缺失或为空白截断，立即自动补绘御窑青花大作
+          if (coloredCount < (sampleW * sampleH * 0.002)) {
+            console.warn('[PotteryMaterials] White/empty belly detected on canvas, auto-reinforcing authentic Qinghua motif')
+            renderAICompositeMotif(this.ctx, this.canvas.width, this.canvas.height)
+          }
+        } catch (e) {
+          console.warn('[PotteryMaterials] Canvas pixel check note:', e)
+        }
+
         this.texture.needsUpdate = true
         this.material.map = this.texture
         this.material.color.setHex(0xffffff)
@@ -209,7 +235,7 @@ export class PotteryMaterialManager {
       }
       img.onerror = (err) => {
         console.warn('[PotteryMaterials] SVG image render error, applying fallback motif:', err)
-        this.applyPattern('lotus')
+        renderAICompositeMotif(this.ctx, this.canvas.width, this.canvas.height)
         URL.revokeObjectURL(url)
         resolve()
       }

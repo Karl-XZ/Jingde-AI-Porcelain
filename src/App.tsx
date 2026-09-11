@@ -364,9 +364,21 @@ export default function App() {
       const curH = shapeStateRef.current.heightScale
       const curR = shapeStateRef.current.rimScale
       const curB = shapeStateRef.current.bellyScale
-      const newH = act.payload.heightScale !== undefined ? Number(act.payload.heightScale) : curH
-      const newR = act.payload.rimScale !== undefined ? Number(act.payload.rimScale) : curR
-      const newB = act.payload.bellyScale !== undefined ? Number(act.payload.bellyScale) : curB
+      let newH = act.payload.heightScale !== undefined ? Number(act.payload.heightScale) : curH
+      let newR = act.payload.rimScale !== undefined ? Number(act.payload.rimScale) : curR
+      let newB = act.payload.bellyScale !== undefined ? Number(act.payload.bellyScale) : curB
+
+      // 核心多轮递进保障：若大模型或保底返回的静态预设与当前状态相近 (<=0.05)，自动赋予连贯递进增量，确保多轮对话次次形变可见
+      if (act.payload.heightScale !== undefined && Math.abs(newH - curH) <= 0.05) {
+        newH = newH >= 1.0 ? Math.min(1.7, curH + 0.15) : Math.max(0.55, curH - 0.15)
+      }
+      if (act.payload.bellyScale !== undefined && Math.abs(newB - curB) <= 0.05) {
+        newB = newB >= 1.0 ? Math.min(1.7, curB + 0.15) : Math.max(0.55, curB - 0.12)
+      }
+      if (act.payload.rimScale !== undefined && Math.abs(newR - curR) <= 0.05) {
+        newR = newR >= 1.0 ? Math.min(1.7, curR + 0.15) : Math.max(0.55, curR - 0.12)
+      }
+
       shapeStateRef.current = { heightScale: newH, rimScale: newR, bellyScale: newB }
       setHeightScale(newH)
       setRimScale(newR)

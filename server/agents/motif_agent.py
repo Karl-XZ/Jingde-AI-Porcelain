@@ -457,14 +457,22 @@ class VectorMotifAgent(BaseJiuwenAgent):
         user_msg = f"请为景德镇御窑瓷器绘制高精青花矢量纹样，主题为：【{theme}】"
         if motif_type:
             user_msg += f"（承袭官窑脉络：{motif_type}）"
-        user_msg += "。请使用中国传统白描与青花分水技法，利用 <defs> 定义精美花朵/花蕾/枝叶并在画面中丰富展开。花朵必须使用饱满生动的贝塞尔曲线路径与苍劲枝干路径，严禁任何旋转椭圆，背景透明，请控制在 2500 tokens 以内并务必闭合全部标签与 </svg>。"
+        user_msg += (
+            "。\n【系统重要规范】：\n"
+            "1. 系统底座已全量内置景德镇传统图元库（包括盛开大花 #peony_flower_refined、#lotus_flower_full、"
+            "#plum_flower_refined、#chrysanthemum_flower、#orchid_flower、祥龙、苍松仙鹤、游鱼水藻、三裂叶、如意云肩等），"
+            "**绝对严禁在代码中重复编写庞大的 <defs> 定义**！\n"
+            "2. 请直接在 <svg viewBox=\"0 0 1024 1024\"> 根节点下，使用 <path> 绘制苍劲枝干/水波，"
+            "并使用 <use href=\"#ID\" .../> 在腹部核心区（重点位于 x: 256, 512, 768，y: 420~600 处）密集展开至少 3~5 朵盛开主花/主景！\n"
+            "3. 保持背景透明，严禁不透明矩形；严禁任何旋转椭圆；请控制在 1500 tokens 内并务必完整闭合全部标签与 </svg>。"
+        )
 
-        raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=6000)
+        raw_resp = await self.chat(user_msg, temperature=0.7, max_tokens=4000)
 
         svg_code = self._extract_svg_code(raw_resp)
         meta = self._extract_metadata(raw_resp)
 
-        # Check if the generated SVG has actual belly motifs and does NOT contain the atomic ellipse pattern
+        # 严格腹部主图元核验，防止因 LLM 截断输出导致只有边框而腹部白胎
         is_valid_complete_motif = False
         if svg_code:
             svg_code = re.sub(r'<rect\s+width="1024"\s+height="1024"\s+fill="#[fF0-9a-fA-F]+"\s*\/?>', '', svg_code)
@@ -478,8 +486,13 @@ class VectorMotifAgent(BaseJiuwenAgent):
                 if "</defs>" in svg_code:
                     body_content = svg_code.split("</defs>", 1)[1]
                 elements = re.findall(r'<(?:path|use|circle|polygon|g)\b', body_content)
-                has_belly_content = bool(re.search(r'(?:<use|\b(?:y|y1|y2|cy)\s*=\s*["\']?(?:[3-7]\d\d|800))', body_content))
-                if len(elements) >= 8 and has_belly_content:
+                
+                # 腹部实质性图元校验：必须在腹部视区 (y: 300~750) 具备实质主景（至少 2 个 <use> 或 3 组具有腹部坐标的路径）
+                belly_uses = re.findall(r'<use\b[^>]*href=["\']#([^"\']+)["\']', body_content)
+                belly_coords = re.findall(r'\b(?:y|y1|y2|cy|translate\(\s*\d+\s*,\s*)\s*=?\s*["\']?(?:[3-6]\d\d|7[0-4]\d)\b', body_content)
+                has_substantive_belly = len(belly_uses) >= 2 or len(belly_coords) >= 3
+
+                if len(elements) >= 8 and has_substantive_belly:
                     is_valid_complete_motif = True
 
         if is_valid_complete_motif and svg_code:
@@ -527,6 +540,7 @@ class VectorMotifAgent(BaseJiuwenAgent):
         is_fish = "鱼" in theme
         is_plum = ("梅" in theme) or ("寒梅" in theme) or ("折枝梅" in theme)
         is_peony = ("牡丹" in theme) or ("富贵" in theme) or ("国色" in theme)
+        is_lotus = ("莲" in theme) or ("荷" in theme) or ("荷花" in theme) or ("莲花" in theme) or ("水华" in theme) or ("清漪" in theme)
         is_bamboo = ("竹" in theme) or ("墨竹" in theme) or ("虚心" in theme)
         is_orchid = ("兰" in theme) or ("幽兰" in theme) or ("芝兰" in theme)
         is_chrysanthemum = ("菊" in theme) or ("菊花" in theme) or ("东篱" in theme)
@@ -643,18 +657,87 @@ class VectorMotifAgent(BaseJiuwenAgent):
       <path d="M 0 512 C 128 390, 128 634, 256 512 C 384 390, 384 634, 512 512 C 640 390, 640 634, 768 512 C 896 390, 896 634, 1024 512" stroke="#081830" stroke-width="10" fill="none"/>
       <path d="M 0 512 C 128 634, 128 390, 256 512 C 384 634, 384 390, 512 512 C 640 634, 640 390, 768 512 C 896 634, 896 390, 1024 512" stroke="#143b75" stroke-width="5" stroke-dasharray="16,8" fill="none"/>
 
-      <!-- 正面第一主牡丹大花 (x=512) -->
-      <use href="#peony_flower_refined" x="512" y="512" transform="scale(1.2) translate(-20,-20)"/>
-      <use href="#peony_flower_refined" x="256" y="512" transform="scale(1.0)"/>
-      <use href="#peony_flower_refined" x="768" y="512" transform="scale(1.0)"/>
-      <use href="#peony_flower_refined" x="0" y="512" transform="scale(1.0)"/>
-      <use href="#peony_flower_refined" x="1024" y="512" transform="scale(1.0)"/>
+      <!-- 正面第一主牡丹大花 (x=512 迎客主花) -->
+      <g transform="translate(512, 512) scale(1.3)">
+        <use href="#peony_flower_refined"/>
+      </g>
+      <g transform="translate(256, 512) scale(1.05)">
+        <use href="#peony_flower_refined"/>
+      </g>
+      <g transform="translate(768, 512) scale(1.05)">
+        <use href="#peony_flower_refined"/>
+      </g>
+      <g transform="translate(0, 512) scale(0.95)">
+        <use href="#peony_flower_refined"/>
+      </g>
+      <g transform="translate(1024, 512) scale(0.95)">
+        <use href="#peony_flower_refined"/>
+      </g>
 
-      <!-- 繁茂三裂牡丹叶 -->
-      <use href="#peony_leaf" x="128" y="420" transform="scale(1.1) rotate(-25 128 420)"/>
-      <use href="#peony_leaf" x="384" y="610" transform="scale(1.1) rotate(150 384 610)"/>
-      <use href="#peony_leaf" x="640" y="420" transform="scale(1.1) rotate(-25 640 420)"/>
-      <use href="#peony_leaf" x="896" y="610" transform="scale(1.1) rotate(150 896 610)"/>
+      <!-- 繁茂三裂牡丹叶与卷草 -->
+      <g transform="translate(128, 420) scale(1.1) rotate(-25)">
+        <use href="#peony_leaf"/>
+      </g>
+      <g transform="translate(384, 610) scale(1.1) rotate(150)">
+        <use href="#peony_leaf"/>
+      </g>
+      <g transform="translate(640, 420) scale(1.1) rotate(-25)">
+        <use href="#peony_leaf"/>
+      </g>
+      <g transform="translate(896, 610) scale(1.1) rotate(150)">
+        <use href="#peony_leaf"/>
+      </g>
+    </g>"""
+
+        elif is_lotus:
+            # 清涟出尘连年有余荷花图 (盛开大荷花、翻卷荷叶、莲蓬莲蕾)
+            main_motif = """
+    <!-- 清涟出尘连年有余荷花主纹 (四方连绵接天莲叶荷花) -->
+    <g stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 0 520 C 128 440, 256 600, 384 520 C 512 440, 640 600, 768 520 C 896 440, 960 580, 1024 520" stroke="#081830" stroke-width="8" fill="none"/>
+      <path d="M 0 560 C 128 620, 256 480, 384 560 C 512 620, 640 480, 768 560 C 896 620, 960 500, 1024 560" stroke="#143b75" stroke-width="4" stroke-dasharray="16,10" fill="none"/>
+
+      <!-- 正面第一主盛开大荷花 (x=512 迎面盛放大景) -->
+      <g transform="translate(512, 480) scale(1.35)">
+        <use href="#lotus_flower_full"/>
+      </g>
+      <g transform="translate(256, 490) scale(1.1)">
+        <use href="#lotus_flower_full"/>
+      </g>
+      <g transform="translate(768, 490) scale(1.1)">
+        <use href="#lotus_flower_full"/>
+      </g>
+      <g transform="translate(0, 480) scale(1.0)">
+        <use href="#lotus_flower_full"/>
+      </g>
+      <g transform="translate(1024, 480) scale(1.0)">
+        <use href="#lotus_flower_full"/>
+      </g>
+
+      <!-- 侧展半开荷花与含苞莲蕾 -->
+      <g transform="translate(390, 380) scale(1.15)">
+        <use href="#lotus_flower_side"/>
+      </g>
+      <g transform="translate(634, 380) scale(-1.15, 1.15)">
+        <use href="#lotus_flower_side"/>
+      </g>
+      <g transform="translate(160, 410) scale(1.1)">
+        <use href="#lotus_bud"/>
+      </g>
+      <g transform="translate(864, 410) scale(1.1)">
+        <use href="#lotus_bud"/>
+      </g>
+
+      <!-- 舒展翻卷大荷叶 -->
+      <g transform="translate(512, 660) scale(1.3)">
+        <use href="#lotus_leaf"/>
+      </g>
+      <g transform="translate(220, 650) scale(1.15) rotate(-15)">
+        <use href="#lotus_leaf"/>
+      </g>
+      <g transform="translate(800, 650) scale(1.15) rotate(15)">
+        <use href="#lotus_leaf"/>
+      </g>
     </g>"""
 
         elif is_dragon:

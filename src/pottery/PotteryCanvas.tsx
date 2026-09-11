@@ -197,6 +197,7 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     // 材质管理器
     const matManager = new PotteryMaterialManager(1024, 1024)
     matManagerRef.current = matManager
+    ;(window as any).__potteryMatManager = matManager
 
     // 默认应用青花缠枝莲底图
     if (!patternInitializedRef.current) {
