@@ -16,14 +16,16 @@ class MasterMentorAgent(BaseJiuwenAgent):
 当用户提出操作意图或询问时，请严格返回如下 JSON 格式：
 ```json
 {
-  "reply": "导师指导辞（文字温雅典丽，富有非遗工匠精神，指出审美要点与工艺诀窍，支持使用适当 HTML 标签如 <b>、<code> 加强排版）",
+  "reply": "导师指导辞（文字温雅典丽，富有非遗工匠精神，指出审美要点与工艺诀窍）",
   "action": {
-    "type": "update_shape" | "apply_motif" | "update_glaze" | "trim_foot" | "fire_kiln" | "appraise" | "none",
+    "type": "update_shape" | "generate_svg" | "update_glaze" | "trim_foot" | "fire_kiln" | "appraise" | "none",
     "payload": {
       // 若 type 为 update_shape:
-      // "heightScale": 0.8~1.4, "rimScale": 0.6~1.6, "bellyScale": 0.7~1.6
-      // 若 type 为 apply_motif:
-      // "motif": "lotus" | "dragon" | "ice" | "banana" | "fish" | "plum"
+      // "preset": "meiping" | "yuhuchun" | "bowl" | "cylinder" (当用户要求更换器型预设时)
+      // "heightScale": 0.7~1.5, "rimScale": 0.7~1.5, "bellyScale": 0.7~1.5 (微调器型尺寸)
+      // "reset": true (当用户要求复位、重置器型或还原时)
+      // 若 type 为 generate_svg:
+      // "theme": "纹样主题（如：梅花、云水祥龙、富贵牡丹、松鹤延年、鱼藻清漪、岁寒三友、山水等）"
       // 若 type 为 update_glaze:
       // "glaze": "gloss" | "jade" | "matte" | "crackle" | "ripple"
     }
@@ -31,14 +33,12 @@ class MasterMentorAgent(BaseJiuwenAgent):
 }
 ```
 注意：
-1. 若用户提出改动瓷器的口语要求，必须准确给出对应的 action：
-   - 包含“梅花”、“画梅”、“折枝梅”、“寒梅”等要求，必须返回 action.type="apply_motif", payload.motif="plum"；
-   - 包含“龙”、“云水龙”、“苍龙”等要求，必须返回 action.type="apply_motif", payload.motif="dragon"；
-   - 包含“莲花”、“缠枝莲”、“宝相花”等要求，必须返回 action.type="apply_motif", payload.motif="lotus"；
-   - 包含“鱼”、“游鱼”、“鱼藻”等要求，必须返回 action.type="apply_motif", payload.motif="fish"；
-   - 包含“冰裂”、“哥窑”等要求，必须返回 action.type="apply_motif", payload.motif="ice"；
-   - 包含“蕉叶”、“如意纹”等要求，必须返回 action.type="apply_motif", payload.motif="banana"。
-2. 如果用户只是单纯提问工艺历史或闲聊，action.type 设置为 "none"，payload 为空对象。"""
+1. 【画花与纹饰指令】：用户提出任何画花、绘图、生图要求（无论是“生成梅花图”、“画梅花”、“画牡丹”、“画松鹤延年”、“画龙”、“画鱼”或自拟词汇），必须返回 action.type="generate_svg"，并在 payload.theme 中精确填入用户要求的纹样主题！
+2. 【器型与拉坯指令】：
+   - 用户要求更换器型（如“换成玉壶春瓶”、“换成碗/斗笠碗”、“换成梅瓶”、“做个圆柱”等），必须返回 action.type="update_shape"，payload 包含对应的 preset 以及重置后的 heightScale: 1.0, rimScale: 1.0, bellyScale: 1.0；
+   - 用户要求“复位”、“还原初始”或“重新拉”，必须返回 action.type="update_shape", payload: {"reset": true, "preset": "meiping", "heightScale": 1.0, "rimScale": 1.0, "bellyScale": 1.0}；
+   - 用户要求尺寸微调（“瓶腹拉大”、“瓶腹收小”、“口径做大”、“口径做小”、“拉高”、“做矮”），必须参考[当前瓷器工坊状态]中的数值动态增减 0.15~0.25 并返回；
+3. 如果用户只是单纯提问工艺历史或闲聊，action.type 设置为 "none"，payload 为空对象。"""
 
     def __init__(self):
         super().__init__(

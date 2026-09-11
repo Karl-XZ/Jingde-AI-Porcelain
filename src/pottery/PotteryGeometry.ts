@@ -227,7 +227,7 @@ export class PotteryGeometryBuilder {
   public adjustParameters(heightScale: number, rimScale: number, bellyScale: number) {
     this.height = 14 * Math.max(0.6, Math.min(1.6, heightScale))
 
-    // 寻找当前器型最丰满处 t_max
+    // 寻找当前器型最丰满处 t_max (通常梅瓶在 t=0.76，玉壶春在 t=0.28，斗笠碗在 t=1.0)
     let maxIdx = 0
     let maxR = -1
     for (let i = 0; i < this.ringCount; i++) {
@@ -236,20 +236,28 @@ export class PotteryGeometryBuilder {
         maxIdx = i
       }
     }
-    const tBellyPeak = Math.max(0.25, Math.min(0.82, maxIdx / (this.ringCount - 1)))
+    const tBellyPeak = Math.max(0.20, Math.min(0.80, maxIdx / (this.ringCount - 1)))
 
     for (let i = 0; i < this.ringCount; i++) {
       const t = i / (this.ringCount - 1)
       let baseR = this.initialRadii[i]
 
-      // 1. 腹部/肩部高斯平滑膨胀影响核 (C2 连续，在上下两端自然平稳衰减归零)
-      const bellyDist = (t - tBellyPeak) / 0.28
-      const bellyWeight = Math.exp(-bellyDist * bellyDist)
+      // 1. 腹部/肩部专用膨胀衰减核：确保在口沿 (t > 0.88) 和底座 (t < 0.08) 处彻底衰减至 0，绝不破坏口沿与圈足
+      let bellyWeight = 0
+      if (t >= 0.08 && t <= 0.88) {
+        const span = t < tBellyPeak ? (tBellyPeak - 0.08) : (0.88 - tBellyPeak)
+        if (span > 0.001) {
+          const normDist = Math.abs(t - tBellyPeak) / span
+          if (normDist <= 1.0) {
+            bellyWeight = Math.cos(normDist * Math.PI * 0.5) ** 2
+          }
+        }
+      }
       baseR *= 1.0 + (bellyScale - 1.0) * bellyWeight
 
-      // 2. 口沿平滑缩放核 (从 t=0.70 平滑过渡至口沿，一气呵成)
-      if (t > 0.70) {
-        const normT = (t - 0.70) / 0.30
+      // 2. 口沿独立缩放核：仅在顶部口沿束颈与外翻唇口 (t > 0.86) 起作用，平滑过渡至 t=1.0，绝不干扰肩部
+      if (t > 0.86) {
+        const normT = (t - 0.86) / 0.14
         const rimWeight = normT * normT * (3 - 2 * normT) // smoothstep
         baseR *= 1.0 + (rimScale - 1.0) * rimWeight
       }

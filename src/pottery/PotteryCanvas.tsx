@@ -8,7 +8,7 @@ import { type MotifType } from './patterns'
 export interface PotteryCanvasHandle {
   loadPreset: (preset: PresetType) => void
   applyMotif: (motif: MotifType) => void
-  applySvgMotif: (svgCode: string) => void
+  applySvgMotif: (svgCode: string) => Promise<void> | void
   setGlaze: (glaze: GlazeType) => void
   applyCustomPBR: (pbr: Record<string, number | string | undefined>) => void
   smoothGeometry: () => void
@@ -21,6 +21,7 @@ export interface PotteryCanvasHandle {
   exportCert: () => Promise<void>
   exportPoster: () => Promise<void>
   resetGeometry: () => void
+  adjustParameters: (heightScale: number, rimScale: number, bellyScale: number) => void
   zoomCamera: (deltaDist: number) => void
   resetCamera: () => void
 }
@@ -695,7 +696,25 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
       const mesh = clayMeshRef.current
       if (!mesh) return
       builder.loadPreset(preset)
+      if (preset === 'bowl') {
+        builder.adjustParameters(0.75, 1.48, 1.0)
+      } else if (preset === 'yuhuchun') {
+        builder.adjustParameters(0.96, 1.08, 1.14)
+      } else if (preset === 'meiping') {
+        builder.adjustParameters(1.02, 0.95, 1.04)
+      }
       builder.syncBaseline()
+      builder.updateGeometryPositions(mesh.geometry)
+      onMeasurementsChangeRef.current?.(
+        parseFloat((builder.height * 2.2).toFixed(1)),
+        parseFloat((builder.outerRadii[builder.ringCount - 1] * 2.5).toFixed(1))
+      )
+    },
+    adjustParameters: (h: number, r: number, b: number) => {
+      const builder = builderRef.current
+      const mesh = clayMeshRef.current
+      if (!mesh) return
+      builder.adjustParameters(h, r, b)
       builder.updateGeometryPositions(mesh.geometry)
       onMeasurementsChangeRef.current?.(
         parseFloat((builder.height * 2.2).toFixed(1)),
@@ -705,8 +724,8 @@ export const PotteryCanvas = forwardRef<PotteryCanvasHandle, PotteryCanvasProps>
     applyMotif: (motif: MotifType) => {
       matManagerRef.current?.applyPattern(motif)
     },
-    applySvgMotif: (svgCode: string) => {
-      matManagerRef.current?.applySvgCode(svgCode)
+    applySvgMotif: async (svgCode: string) => {
+      await matManagerRef.current?.applySvgCode(svgCode)
       if (turntableGroupRef.current) {
         turntableGroupRef.current.rotation.y = 0
       }

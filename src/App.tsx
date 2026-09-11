@@ -318,55 +318,74 @@ export default function App() {
     market_valuation: '官窑国宝级数字孤品',
   })
 
-  function handleMentorAction(act: { type: string; payload?: Record<string, unknown> }) {
+  async function handleMentorAction(act: { type: string; payload?: Record<string, unknown> }): Promise<void> {
     if (act.type === 'update_shape' && act.payload) {
-      if (act.payload.heightScale) setHeightScale(Number(act.payload.heightScale))
-      if (act.payload.rimScale) setRimScale(Number(act.payload.rimScale))
-      if (act.payload.bellyScale) setBellyScale(Number(act.payload.bellyScale))
+      if (curStep !== 'forming' && curStep !== 'trim') {
+        setCurStep('forming')
+      }
+      if (act.payload.reset) {
+        setHeightScale(1.0)
+        setRimScale(1.0)
+        setBellyScale(1.0)
+        canvasRef.current?.resetGeometry()
+        toast('✦ 导师已将器型恢复初始基准形态')
+        return
+      }
+      if (act.payload.preset) {
+        const p = String(act.payload.preset) as PresetType
+        setActivePreset(p)
+        setHeightScale(1.0)
+        setRimScale(1.0)
+        setBellyScale(1.0)
+        canvasRef.current?.loadPreset(p)
+        const nameMap: Record<string, string> = {
+          meiping: '传统梅瓶',
+          yuhuchun: '玉壶春瓶',
+          bowl: '葵口斗笠碗',
+          cylinder: '初始圆柱',
+        }
+        toast(`✦ 导师已为您切换器型为【${nameMap[p] || p}】`)
+        return
+      }
+      const newH = act.payload.heightScale !== undefined ? Number(act.payload.heightScale) : heightScale
+      const newR = act.payload.rimScale !== undefined ? Number(act.payload.rimScale) : rimScale
+      const newB = act.payload.bellyScale !== undefined ? Number(act.payload.bellyScale) : bellyScale
+      setHeightScale(newH)
+      setRimScale(newR)
+      setBellyScale(newB)
+      canvasRef.current?.adjustParameters(newH, newR, newB)
       toast('✦ 导师已口语联动调整器型比例')
     } else if (act.type === 'apply_motif' && act.payload) {
-      const raw = String(act.payload.motif || act.payload.theme || '').toLowerCase()
-      let m: MotifType = 'lotus'
-      if (raw.includes('plum') || raw.includes('梅')) m = 'plum'
-      else if (raw.includes('dragon') || raw.includes('龙')) m = 'dragon'
-      else if (raw.includes('fish') || raw.includes('鱼')) m = 'fish'
-      else if (raw.includes('ice') || raw.includes('裂') || raw.includes('哥窑')) m = 'ice'
-      else if (raw.includes('banana') || raw.includes('蕉')) m = 'banana'
-      else if (raw.includes('blank') || raw.includes('白') || raw.includes('素')) m = 'blank'
-      else if (raw.includes('lotus') || raw.includes('莲') || raw.includes('宝相')) m = 'lotus'
-      else if (raw.includes('花')) m = 'plum'
-      
-      setActiveMotif(m)
-      canvasRef.current?.applyMotif(m)
-      if (curStep === 'forming' || curStep === 'trim') {
+      if (curStep !== 'pattern') {
         setCurStep('pattern')
       }
-      const nameMap: Record<MotifType, string> = {
-        lotus: '青花缠枝莲',
-        dragon: '御窑云水龙',
-        plum: '青花折枝梅',
-        fish: '鱼藻清漪图',
-        ice: '冰裂散点梅',
-        banana: '蕉叶如意纹',
-        blank: '纯白素瓷胎',
-      }
-      toast(`✦ 导师已为您绘制【${nameMap[m] || m}】青花纹饰`)
+      const raw = String(act.payload.motif || act.payload.theme || '').toLowerCase()
+      await handleGenerateSvg(raw)
     } else if (act.type === 'generate_svg' && act.payload) {
-      if (curStep === 'forming' || curStep === 'trim') {
+      if (curStep !== 'pattern') {
         setCurStep('pattern')
       }
       const theme = String(act.payload.theme || act.payload.motif || '梅花')
-      handleGenerateSvg(theme)
+      await handleGenerateSvg(theme)
     } else if (act.type === 'update_glaze' && act.payload?.glaze) {
+      if (curStep !== 'glaze') {
+        setCurStep('glaze')
+      }
       const g = act.payload.glaze as GlazeType
       setActiveGlaze(g)
       canvasRef.current?.setGlaze(g)
       toast(`✦ 导师已为您施【${g}】名贵罩釉`)
     } else if (act.type === 'trim_foot') {
+      if (curStep !== 'trim') {
+        setCurStep('trim')
+      }
       canvasRef.current?.smoothGeometry()
       canvasRef.current?.trimFoot()
       toast('✦ 导师已为您执行匀壁修足刀法')
     } else if (act.type === 'fire_kiln') {
+      if (curStep !== 'fire') {
+        setCurStep('fire')
+      }
       canvasRef.current?.triggerFiring()
       toast('✦ 导师已令开炉起火烧窑！')
     }
@@ -398,9 +417,11 @@ export default function App() {
       const res = await chatWithMentor(text, history, context)
       setMessages((m) => [...m, { role: 'ai', html: res.reply }])
 
-      // 执行导师下达的口语控瓷交互指令
+      // 执行导师下达的口语控瓷交互指令（普通对话模式在此执行；数字人模式由 DigitalHumanMentor 统一协同调度）
       if (res.action && res.action.type !== 'none') {
-        handleMentorAction(res.action)
+        if (!isDigitalHuman) {
+          handleMentorAction(res.action)
+        }
       }
       return res
     } catch (err) {
@@ -476,14 +497,26 @@ export default function App() {
   }
 
   // 3. AI SVG 矢量青花生成处理
-  async function handleGenerateSvg(theme: string, typeKey?: MotifType) {
+  async function handleGenerateSvg(theme: string, typeKey?: MotifType): Promise<void> {
     if (!theme.trim()) return
     setIsGeneratingSvg(true)
     toast(`✦ DeepSeek 正在编译生成【${theme}】SVG 矢量图元...`)
     try {
       const res = await generatePatternSvg(theme, typeKey)
-      if (typeKey) setActiveMotif(typeKey)
-      canvasRef.current?.applySvgMotif(res.svg_code)
+      let mappedMotif: MotifType = 'blank'
+      if (typeKey) {
+        mappedMotif = typeKey
+      } else {
+        const t = theme.toLowerCase()
+        if (t.includes('梅')) mappedMotif = 'plum'
+        else if (t.includes('龙')) mappedMotif = 'dragon'
+        else if (t.includes('鱼')) mappedMotif = 'fish'
+        else if (t.includes('冰') || t.includes('裂')) mappedMotif = 'ice'
+        else if (t.includes('蕉') || t.includes('如意')) mappedMotif = 'banana'
+        else if (t.includes('莲') || t.includes('缠枝')) mappedMotif = 'lotus'
+      }
+      setActiveMotif(mappedMotif)
+      await canvasRef.current?.applySvgMotif(res.svg_code)
       toast(`✦ 已成功将【${res.motif_name}】矢量青花映射至 3D 瓷身！`)
       setMessages((m) => [
         ...m,

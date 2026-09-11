@@ -18,7 +18,7 @@ declare global {
 export interface DigitalHumanMentorProps {
   onClose: () => void
   onAsk: (message: string, isDigitalHuman?: boolean) => Promise<MentorChatResponse>
-  onAction?: (action: { type: string; payload?: Record<string, unknown> }) => void
+  onAction?: (action: { type: string; payload?: Record<string, unknown> }) => Promise<unknown> | void
   currentStep: string
   currentHeightScale: number
   currentRimScale: number
@@ -123,22 +123,47 @@ export function DigitalHumanMentor({
     }
     abortControllerRef.current = new AbortController()
 
+    // 检查是否为画花/生图/纹饰意图
+    const isMotif = /生成|画|绘|纹|梅|牡丹|竹|兰|菊|松|鹤|龙|鱼|宝相|图案|图元|花/.test(text)
+    const cleanTheme = text.replace(/^(请|帮我|在瓷身|在瓶身)?(生成|画|绘|绘制)/, '').trim() || text
+
     // 立即打断当前正在说的内容，切换提示
-    setSubtitle(`正在思索并执行：“${text}”…`)
+    if (isMotif) {
+      setSubtitle(`正在推演编译【${cleanTheme}】御窑青花矢量图元…`)
+    } else {
+      setSubtitle(`正在思索并执行：“${text}”…`)
+    }
     setIsAiThinking(true)
 
     try {
       // 携带 isDigitalHuman=true，通知后端大模型严格将回复限制在 50 字以内
       const res = await onAsk(text, true)
 
-      // 提取纯文本回复并调用数字人口播
-      if (res && res.reply) {
-        speak(res.reply, true)
-      }
+      // 如果有联动控瓷动作，同步执行；生图完成后才让数字人说话回复
+      const shouldGenerateSvg =
+        (res && res.action && (res.action.type === 'generate_svg' || res.action.type === 'apply_motif')) ||
+        (isMotif && onAction)
 
-      // 如果有联动控瓷动作，同步执行
-      if (res && res.action && res.action.type !== 'none' && onAction) {
-        onAction(res.action)
+      if (shouldGenerateSvg && onAction) {
+        const motifTheme = String(res?.action?.payload?.theme || res?.action?.payload?.motif || cleanTheme)
+        setSubtitle(`正在推演编译【${motifTheme}】御窑青花矢量图元…`)
+        await onAction(
+          res?.action?.type === 'generate_svg'
+            ? res.action
+            : { type: 'generate_svg', payload: { theme: motifTheme } }
+        )
+        if (res && res.reply) {
+          speak(res.reply, true)
+        }
+      } else if (res && res.action && res.action.type !== 'none' && onAction) {
+        await onAction(res.action)
+        if (res && res.reply) {
+          speak(res.reply, true)
+        }
+      } else {
+        if (res && res.reply) {
+          speak(res.reply, true)
+        }
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {

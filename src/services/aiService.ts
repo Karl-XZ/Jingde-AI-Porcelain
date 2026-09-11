@@ -83,7 +83,8 @@ export interface AppraisalResponse {
 async function fetchApi<T>(endpoint: string, body: unknown, fallback: T): Promise<T> {
   try {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 20000)
+    const timeoutMs = endpoint.includes('/pattern/svg') ? 60000 : 25000
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
 
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
