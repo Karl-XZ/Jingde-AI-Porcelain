@@ -3,7 +3,11 @@
  * 深度集成华为 openJiuwen 多智能体协作蜂群与 DeepSeek V4 Flash
  */
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = import.meta.env.VITE_API_BASE || (
+  typeof window !== 'undefined' && (window.location.origin.includes('openl.work') || window.location.pathname.startsWith('/jingde'))
+    ? '/jingde/api'
+    : 'http://127.0.0.1:8000/api'
+)
 
 export interface MentorChatResponse {
   reply: string
